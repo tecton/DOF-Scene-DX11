@@ -25,7 +25,18 @@ namespace DOFScene
         public MainWindow()
         {
             InitializeComponent();
+
+            Loaded += (o, e) =>
+            {
+                var workingArea = System.Windows.Forms.Screen.PrimaryScreen.WorkingArea;
+                var transform = PresentationSource.FromVisual(this).CompositionTarget.TransformFromDevice;
+                var corner = transform.Transform(new Point(workingArea.Right, workingArea.Bottom));
+
+                this.Left = corner.X - this.ActualWidth;
+                this.Top = corner.Y - this.ActualHeight;
+            };
             displayWindow.showWindow();
+            displayWindow.Draw();
         }
     }
 }
