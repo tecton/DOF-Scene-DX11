@@ -71,7 +71,9 @@ namespace DOFScene
                 //add it to the mesh
                 triangleMesh.vertexCount = faceCountInModelGroup(group) * 3;
 
+                triangleMesh.ambientColor = new Vector4(group.Material.AmbientColor.X, group.Material.AmbientColor.Y, group.Material.AmbientColor.Z, 1.0f);
                 triangleMesh.diffuseColor = new Vector4(group.Material.DiffuseColor.X, group.Material.DiffuseColor.Y, group.Material.DiffuseColor.Z, 1.0f);
+                triangleMesh.specularColor = new Vector4(group.Material.SpecularColor.X, group.Material.SpecularColor.Y, group.Material.SpecularColor.Z, group.Material.SpecularCoefficient);
 
                 if (group.Material.DiffuseTextureMap != null)
                     triangleMesh.AddTextureDiffuse(device, group.Material.DiffuseTextureMap);

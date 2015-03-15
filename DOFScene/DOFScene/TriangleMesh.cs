@@ -21,7 +21,11 @@ namespace DOFScene
 
         public int vertexCount;
 
+        public Vector4 ambientColor;
+
         public Vector4 diffuseColor;
+
+        public Vector4 specularColor;
 
         public Texture2D diffuseTexture;
 
