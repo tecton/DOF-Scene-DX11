@@ -13,21 +13,37 @@ using Device = SharpDX.Direct3D11.Device;
 
 namespace DOFScene
 {
-    //data to pass to the vertex and pixel shader
-    public struct VertexShaderData
+    public struct DirectionalLight
     {
-        public Matrix worldViewProj;
-        public Matrix world;
+        public Vector4 Ambient;
+	    public Vector4 Diffuse;
+	    public Vector4 Specular;
+	    public Vector3 Direction;
+        public float padding;
     };
 
-    public struct PixelShaderData
+    public struct Material
     {
-        public Vector4 diffuseColor;
-        public float useTexture;
-        public float useLight;
-        public Vector2 padding;
-        public Vector4 lightPos;
-        public Vector4 lightAmbient;
+        public Vector4 Ambient;
+        public Vector4 Diffuse;
+        public Vector4 Specular; // w = SpecPower
+    };
+
+    public struct PerObjectData
+    {
+        public Matrix world;
+        public Matrix worldInvTranspose;
+        public Matrix worldViewProj;
+        public Material material;
+        public float textured;
+        public Vector3 padding;
+    };
+
+    public struct PerFrameData
+    {
+        public DirectionalLight dirLight;
+        public Vector3 eyePosition;
+        public float padding;
     };
 
     // A container for the meshes loaded from the file
@@ -35,8 +51,8 @@ namespace DOFScene
     {
         List<TriangleMesh> m_meshes;
 
-        //allocate data structs for the vertex and pixel constant buffers
-        public VertexShaderData vsData = new VertexShaderData();
+        //allocate data structs for per object constant buffers
+        public PerObjectData poData = new PerObjectData();
 
         Device device;
 
@@ -57,17 +73,21 @@ namespace DOFScene
 
         public void SetWorldMatrix(Matrix world, Matrix viewProj)
         {
-            vsData.world = world;
+            poData.world = world;
+            world.Invert();
+            world.Transpose();
+            poData.worldInvTranspose = world;
 
             // Update transformation matrices
-            vsData.worldViewProj = vsData.world * viewProj;
+            poData.worldViewProj = poData.world * viewProj;
 
-            //transpose matrices before sending them to the shader
-            vsData.world.Transpose();
-            vsData.worldViewProj.Transpose();
+            //transpose matrices before sending them to the shader, because hlsl do vec * matrix
+            poData.world.Transpose();
+            poData.worldInvTranspose.Transpose();
+            poData.worldViewProj.Transpose();
         }
 
-        public void Draw(DeviceContext context, Buffer vcBuffer, Buffer pcBuffer)
+        public void Draw(DeviceContext context, Buffer objectBuffer)
         {
             foreach (TriangleMesh mesh in m_meshes)
             {
@@ -76,28 +96,22 @@ namespace DOFScene
                 context.PixelShader.SetShaderResource(0, mesh.diffuseTextureView);
 
                 DataStream stream;
-                DataBox databox = context.MapSubresource(vcBuffer, 0, MapMode.WriteDiscard, SharpDX.Direct3D11.MapFlags.None, out stream);
+                DataBox databox;
 
-                if (!databox.IsEmpty)
-                    stream.Write(vsData);
-                context.UnmapSubresource(vcBuffer, 0);
-
-                PixelShaderData psData = new PixelShaderData();
-                psData.diffuseColor = mesh.diffuseColor != null ? mesh.diffuseColor : new Vector4(1.0f, 1.0f, 1.0f, 1.0f);
-                psData.useLight = 1.0f;
+                poData.material = new Material();
+                poData.material.Diffuse = mesh.diffuseColor;
+                poData.material.Ambient = mesh.ambientColor;
+                poData.material.Specular = mesh.specularColor;
                 if (mesh.diffuseTexture != null)
-                    psData.useTexture = 1.0f;
+                    poData.textured = 1.0f;
                 else
-                    psData.useTexture = 0.0f;
-                //set light position
-                psData.lightPos = new Vector4(0, 5, 0, 0);
-                psData.lightAmbient = new Vector4(0.1f, 0.1f, 0.1f, 1.0f);
+                    poData.textured = 0.0f;
 
-                databox = context.MapSubresource(pcBuffer, 0, MapMode.WriteDiscard, SharpDX.Direct3D11.MapFlags.None, out stream);
+                databox = context.MapSubresource(objectBuffer, 0, MapMode.WriteDiscard, SharpDX.Direct3D11.MapFlags.None, out stream);
 
                 if (!databox.IsEmpty)
-                    stream.Write(psData);
-                context.UnmapSubresource(pcBuffer, 0);
+                    stream.Write(poData);
+                context.UnmapSubresource(objectBuffer, 0);
 
                 //draw
                 context.Draw(mesh.vertexCount, 0);

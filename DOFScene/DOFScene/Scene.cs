@@ -12,6 +12,7 @@ namespace DOFScene
 {
     public class Scene
     {
+        Vector3 eyePos;
         Matrix viewProj;
         List<Model> models;
 
@@ -33,8 +34,8 @@ namespace DOFScene
             var dir = new Vector3((float)(-Math.Cos(3 / 180.0 * Math.PI) * Math.Sin(52 / 180.0 * Math.PI)),
                 (float)-Math.Sin(3 / 180.0 * Math.PI),
                 (float)(Math.Cos(3 / 180.0 * Math.PI) * Math.Cos(52 / 180.0 * Math.PI)));
-            var pos = new Vector3(2.3f, 0.05f, -0.5f);
-            var view = Matrix.LookAtLH(pos, pos + dir, Vector3.UnitY);
+            eyePos = new Vector3(2.3f, 0.05f, -0.5f);
+            var view = Matrix.LookAtLH(eyePos, eyePos + dir, Vector3.UnitY);
             //var view = Matrix.LookAtLH(new Vector3(0, 0, -2), new Vector3(0, 0, 0), Vector3.UnitY);
             var proj = Matrix.PerspectiveFovLH((float)Math.PI * 30f / 180.0f, size.Width / (float)size.Height, 0.1f, 4000.0f);
             viewProj = Matrix.Multiply(view, proj);
@@ -48,17 +49,36 @@ namespace DOFScene
             models.Add(modelLoader.Load("ground.obj"));
         }
 
-        public void Draw(DeviceContext context, Buffer vcBuffer, Buffer pcBuffer)
+        public void UpdateFrameConstants(DeviceContext context, Buffer frameConstantBuffer)
+        {
+            PerFrameData pfData = new PerFrameData();
+            pfData.eyePosition = eyePos;
+            pfData.dirLight = new DirectionalLight();
+            pfData.dirLight.Ambient = new Vector4(0.5f, 0.5f, 0.5f, 1.0f);
+            pfData.dirLight.Diffuse = new Vector4(0.8f, 0.8f, 0.8f, 1.0f);
+            pfData.dirLight.Specular = new Vector4(0.8f, 0.8f, 0.8f, 1.0f);
+            pfData.dirLight.Direction = new Vector3(0, -1.0f, 0);
+
+            DataStream stream;
+            DataBox databox = context.MapSubresource(frameConstantBuffer, 0, MapMode.WriteDiscard, SharpDX.Direct3D11.MapFlags.None, out stream);
+
+            if (!databox.IsEmpty)
+                stream.Write(pfData);
+            context.UnmapSubresource(frameConstantBuffer, 0);
+        }
+
+        public void Draw(DeviceContext context, Buffer perObjectBuffer)
         {
             float dragonPos = -0.6f;
             for (int i = 0; i <= 10; ++i)
             {
-                models[i % 2].SetWorldMatrix(Matrix.RotationY((float)(-10.0 / 180.0 * Math.PI)) * Matrix.Scaling(dragonScale, dragonScale, dragonScale) * Matrix.Translation(dragonPos, 0, 0), viewProj);
-                models[i % 2].Draw(context, vcBuffer, pcBuffer);
+                var worldPos = Matrix.RotationY((float)(-10.0 / 180.0 * Math.PI)) * Matrix.Scaling(dragonScale, dragonScale, dragonScale) * Matrix.Translation(dragonPos, 0, 0);
+                models[i % 2].SetWorldMatrix(worldPos, viewProj);
+                models[i % 2].Draw(context, perObjectBuffer);
                 dragonPos += 0.26f;
             }
             models[2].SetWorldMatrix(Matrix.Translation(0, 0, 0), viewProj);
-            models[2].Draw(context, vcBuffer, pcBuffer);
+            models[2].Draw(context, perObjectBuffer);
         }
     }
 }

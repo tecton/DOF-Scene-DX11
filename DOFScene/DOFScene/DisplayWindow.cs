@@ -44,8 +44,8 @@ namespace DOFScene
 
         InputLayout layout;
 
-        Buffer pixelConstantBuffer;
-        Buffer vertexConstantBuffer;
+        Buffer frameConstantBuffer;
+        Buffer objectConstantBuffer;
         #endregion
 
         #region Virtual Scene
@@ -66,7 +66,8 @@ namespace DOFScene
             context.ClearDepthStencilView(depthView, DepthStencilClearFlags.Depth, 1.0f, 0);
             context.ClearRenderTargetView(renderView, Color.Black);
 
-            scene.Draw(context, vertexConstantBuffer, pixelConstantBuffer);
+            scene.UpdateFrameConstants(context, frameConstantBuffer);
+            scene.Draw(context, objectConstantBuffer);
 
             swapChain.Present(0, PresentFlags.None);
         }
@@ -160,8 +161,8 @@ namespace DOFScene
                         new InputElement("TEXCOORD", 0, Format.R32G32_Float, 24, 0)
                     });
 
-            pixelConstantBuffer = new Buffer(device, Utilities.SizeOf<PixelShaderData>(), ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0);
-            vertexConstantBuffer = new Buffer(device, Utilities.SizeOf<VertexShaderData>(), ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0);
+            frameConstantBuffer = new Buffer(device, Utilities.SizeOf<PerFrameData>(), ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0);
+            objectConstantBuffer = new Buffer(device, Utilities.SizeOf<PerObjectData>(), ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0);
 
             // Create Depth Buffer & View
             depthBuffer = new Texture2D(device, new Texture2DDescription()
@@ -196,9 +197,11 @@ namespace DOFScene
 
             // Prepare All the stages
             context.VertexShader.Set(vertexShader);
-            context.VertexShader.SetConstantBuffer(0, vertexConstantBuffer);
+            context.VertexShader.SetConstantBuffer(0, objectConstantBuffer);
+            context.VertexShader.SetConstantBuffer(1, frameConstantBuffer);
             context.PixelShader.Set(pixelShader);
-            context.PixelShader.SetConstantBuffer(1, pixelConstantBuffer);
+            context.PixelShader.SetConstantBuffer(0, objectConstantBuffer);
+            context.PixelShader.SetConstantBuffer(1, frameConstantBuffer);
             context.PixelShader.SetSampler(0, sampler);
             context.Rasterizer.SetViewport(new Viewport(0, 0, form.Size.Width, form.Size.Height, 0.0f, 1.0f));
             context.OutputMerger.SetTargets(depthView, renderView);
