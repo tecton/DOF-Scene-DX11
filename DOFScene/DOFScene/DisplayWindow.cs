@@ -37,19 +37,18 @@ namespace DOFScene
         Texture2D depthBuffer;
         DepthStencilView depthView;
 
-        ShaderBytecode vertexShaderByteCode;
-        VertexShader vertexShader;
-        ShaderBytecode pixelShaderByteCode;
-        PixelShader pixelShader;
+        SamplerState sampler;
 
         InputLayout layout;
-
-        Buffer frameConstantBuffer;
-        Buffer objectConstantBuffer;
         #endregion
 
         #region Virtual Scene
         Scene scene;
+        #endregion
+
+        #region Renderers
+        PinholeRenderer pinholeRenderer = new PinholeRenderer();
+        DOFRenderer dofRenderer = new DOFRenderer();
         #endregion
 
         #region Initializer
@@ -62,13 +61,9 @@ namespace DOFScene
         #region Interfaces
         public void Draw()
         {
-            // Clear views
-            context.ClearDepthStencilView(depthView, DepthStencilClearFlags.Depth, 1.0f, 0);
-            context.ClearRenderTargetView(renderView, Color.Black);
-
-            scene.UpdateFrameConstants(context, frameConstantBuffer);
-            scene.Draw(context, objectConstantBuffer);
-
+            pinholeRenderer.Draw(scene, renderView);
+            Texture2D.ToFile(context, pinholeRenderer.outputBuffer, ImageFileFormat.Bmp, "color.bmp");
+            dofRenderer.Draw(renderView, depthView, pinholeRenderer.outputBuffer, pinholeRenderer.depthSRV);
             swapChain.Present(0, PresentFlags.None);
         }
 
@@ -91,10 +86,6 @@ namespace DOFScene
         public void Dispose()
         {
             // Release all resources
-            vertexShaderByteCode.Dispose();
-            vertexShader.Dispose();
-            pixelShaderByteCode.Dispose();
-            pixelShader.Dispose();
             layout.Dispose();
             depthView.Dispose();
             depthBuffer.Dispose();
@@ -123,7 +114,6 @@ namespace DOFScene
             if (initialized)
                 Dispose();
 
-
             // SwapChain description
             swapChainDesc = new SwapChainDescription()
             {
@@ -146,24 +136,6 @@ namespace DOFScene
             backBuffer = Texture2D.FromSwapChain<Texture2D>(swapChain, 0);
             renderView = new RenderTargetView(device, backBuffer);
 
-            // Compile Vertex and Pixel shaders
-            vertexShaderByteCode = ShaderBytecode.CompileFromFile("LoadMesh.fx", "VS", "vs_5_0");
-            vertexShader = new VertexShader(device, vertexShaderByteCode);
-
-            pixelShaderByteCode = ShaderBytecode.CompileFromFile("LoadMesh.fx", "PS", "ps_5_0");
-            pixelShader = new PixelShader(device, pixelShaderByteCode);
-
-            // Layout from VertexShader input signature
-            layout = new InputLayout(device, ShaderSignature.GetInputSignature(vertexShaderByteCode), new[]
-                    {
-                        new InputElement("POSITION", 0, Format.R32G32B32_Float, 0, 0),
-                        new InputElement("NORMAL", 0, Format.R32G32B32_Float, 12, 0),
-                        new InputElement("TEXCOORD", 0, Format.R32G32_Float, 24, 0)
-                    });
-
-            frameConstantBuffer = new Buffer(device, Utilities.SizeOf<PerFrameData>(), ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0);
-            objectConstantBuffer = new Buffer(device, Utilities.SizeOf<PerObjectData>(), ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0);
-
             // Create Depth Buffer & View
             depthBuffer = new Texture2D(device, new Texture2DDescription()
             {
@@ -178,10 +150,9 @@ namespace DOFScene
                 CpuAccessFlags = CpuAccessFlags.None,
                 OptionFlags = ResourceOptionFlags.None
             });
-
             depthView = new DepthStencilView(device, depthBuffer);
 
-            var sampler = new SamplerState(device, new SamplerStateDescription()
+            sampler = new SamplerState(device, new SamplerStateDescription()
             {
                 Filter = Filter.MinMagMipLinear,
                 AddressU = TextureAddressMode.Wrap,
@@ -195,22 +166,16 @@ namespace DOFScene
                 MaximumLod = 16,
             });
 
-            // Prepare All the stages
-            context.VertexShader.Set(vertexShader);
-            context.VertexShader.SetConstantBuffer(0, objectConstantBuffer);
-            context.VertexShader.SetConstantBuffer(1, frameConstantBuffer);
-            context.PixelShader.Set(pixelShader);
-            context.PixelShader.SetConstantBuffer(0, objectConstantBuffer);
-            context.PixelShader.SetConstantBuffer(1, frameConstantBuffer);
+            // global shader setting
             context.PixelShader.SetSampler(0, sampler);
-            context.Rasterizer.SetViewport(new Viewport(0, 0, form.Size.Width, form.Size.Height, 0.0f, 1.0f));
-            context.OutputMerger.SetTargets(depthView, renderView);
-
-            context.InputAssembler.InputLayout = layout;
             context.InputAssembler.PrimitiveTopology = PrimitiveTopology.TriangleList;
 
             // Create Scene
             scene = new Scene(device, form.Size);
+
+            // Init two renderers
+            pinholeRenderer.Init(device, context, displaySize);
+            dofRenderer.Init(device, context, displaySize);
         }
         #endregion
     }

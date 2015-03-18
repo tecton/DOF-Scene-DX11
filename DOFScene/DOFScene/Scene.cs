@@ -54,9 +54,9 @@ namespace DOFScene
             PerFrameData pfData = new PerFrameData();
             pfData.eyePosition = eyePos;
             pfData.dirLight = new DirectionalLight();
-            pfData.dirLight.Ambient = new Vector4(0.5f, 0.5f, 0.5f, 1.0f);
-            pfData.dirLight.Diffuse = new Vector4(0.8f, 0.8f, 0.8f, 1.0f);
-            pfData.dirLight.Specular = new Vector4(0.8f, 0.8f, 0.8f, 1.0f);
+            pfData.dirLight.Ambient = new Vector4(0.6f, 0.6f, 0.6f, 1.0f);
+            pfData.dirLight.Diffuse = new Vector4(0.9f, 0.9f, 0.9f, 1.0f);
+            pfData.dirLight.Specular = new Vector4(0.9f, 0.9f, 0.9f, 1.0f);
             pfData.dirLight.Direction = new Vector3(0, -1.0f, 0);
 
             DataStream stream;
