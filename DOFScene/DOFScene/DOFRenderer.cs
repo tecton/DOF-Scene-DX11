@@ -16,9 +16,16 @@ using MapFlags = SharpDX.Direct3D11.MapFlags;
 
 namespace DOFScene
 {
-    public struct DOFConstantBuffer
+    public struct PositionConstants
     {
         public Matrix worldViewProj;
+    };
+
+    public struct CameraInfoConstants
+    {
+        public Vector4 clipInfo;
+        public float focusPlaneZ;
+        public Vector3 padding;
     };
 
     class DOFRenderer
@@ -38,16 +45,20 @@ namespace DOFScene
         RenderTargetView cocBufferRTV;
         ShaderResourceView cocBufferSRV;
 
-        Buffer constantBuffer;
         int rectVertexSize = 20;
         Buffer rectVertexBuffer;
-        DOFConstantBuffer dofConstants = new DOFConstantBuffer();
+
+        Buffer positionConstantBuffer;
+        PositionConstants dofConstants = new PositionConstants();
+        Buffer cameraConstantBuffer;
+        CameraInfoConstants cameraInfoConstants = new CameraInfoConstants();
 
         void drawCoCPass(RenderTargetView renderView, DepthStencilView depthView, ShaderResourceView colorSRV, ShaderResourceView depthSRV)
         {
             context.VertexShader.Set(cocVertexShader);
-            context.VertexShader.SetConstantBuffer(0, constantBuffer);
+            context.VertexShader.SetConstantBuffer(0, positionConstantBuffer);
             context.PixelShader.Set(cocPixelShader);
+            context.PixelShader.SetConstantBuffer(1, cameraConstantBuffer);
             context.OutputMerger.SetRenderTargets(depthView, renderView);
 
             // Clear views
@@ -64,7 +75,7 @@ namespace DOFScene
         void drawCompositePass(RenderTargetView renderView, DepthStencilView depthView, ShaderResourceView cocBufferSRV)
         {
             context.VertexShader.Set(compositeVertexShader);
-            context.VertexShader.SetConstantBuffer(0, constantBuffer);
+            context.VertexShader.SetConstantBuffer(0, positionConstantBuffer);
             context.PixelShader.Set(compositePixelShader);
             context.OutputMerger.SetRenderTargets(depthView, renderView);
 
@@ -78,7 +89,7 @@ namespace DOFScene
             context.Draw(6, 0);
         }
 
-        public void Draw(RenderTargetView renderView, DepthStencilView depthView, Texture2D colorBuffer, ShaderResourceView depthSRV)
+        public void Draw(RenderTargetView renderView, DepthStencilView depthView, Texture2D colorBuffer, ShaderResourceView depthSRV, Camera camera)
         {
             // Prepare All the stages
             context.InputAssembler.InputLayout = layout;
@@ -86,11 +97,25 @@ namespace DOFScene
             ShaderResourceView colorSRV = new ShaderResourceView(device, colorBuffer);
 
             DataStream stream;
-            DataBox databox = context.MapSubresource(constantBuffer, 0, MapMode.WriteDiscard, SharpDX.Direct3D11.MapFlags.None, out stream);
+            DataBox databox = context.MapSubresource(positionConstantBuffer, 0, MapMode.WriteDiscard, SharpDX.Direct3D11.MapFlags.None, out stream);
 
             if (!databox.IsEmpty)
                 stream.Write(dofConstants);
-            context.UnmapSubresource(constantBuffer, 0);
+            context.UnmapSubresource(positionConstantBuffer, 0);
+
+            float z_n = camera.nearPlaneZ;
+            float z_f = camera.farPlaneZ;
+            float imagePlanePixelsPerMeter = (float)(displaySize.Height / (-2 * Math.Tan(camera.fov / 2)));
+            float scale = (float)(imagePlanePixelsPerMeter * camera.lensRadius / (camera.focusPlaneZ * Math.Max(12, displaySize.Width / 100.0)));
+            cameraInfoConstants.clipInfo = new Vector4(
+                z_n * z_f,  z_n - z_f,  z_f, scale);
+            cameraInfoConstants.focusPlaneZ = camera.focusPlaneZ;
+
+            databox = context.MapSubresource(cameraConstantBuffer, 0, MapMode.WriteDiscard, SharpDX.Direct3D11.MapFlags.None, out stream);
+
+            if (!databox.IsEmpty)
+                stream.Write(cameraInfoConstants);
+            context.UnmapSubresource(cameraConstantBuffer, 0);
 
             context.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(rectVertexBuffer, rectVertexSize, 0));
 
@@ -116,7 +141,8 @@ namespace DOFScene
             var compositePixelShaderByteCode = ShaderBytecode.CompileFromFile("Composite.fx", "PS", "ps_5_0");
             compositePixelShader = new PixelShader(device, compositePixelShaderByteCode);
 
-            constantBuffer = new Buffer(device, Utilities.SizeOf<DOFConstantBuffer>(), ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0);
+            positionConstantBuffer = new Buffer(device, Utilities.SizeOf<PositionConstants>(), ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0);
+            cameraConstantBuffer = new Buffer(device, Utilities.SizeOf<CameraInfoConstants>(), ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0);
 
             // Layout from VertexShader input signature
             layout = new InputLayout(device, ShaderSignature.GetInputSignature(cocVertexShaderByteCode), new[]
@@ -145,8 +171,8 @@ namespace DOFScene
             float w = (float)displaySize.Width * 0.5f, h = (float)displaySize.Height * 0.5f;
             rectVertexBuffer = Buffer.Create(device, BindFlags.VertexBuffer, new[]
                                {
-                                      // 3D coordinates              UV Texture coordinates
-                                      -w, -h, 1.0f,     0.0f, 1.0f, // Front
+                                      // 3D coordinates UV Texture coordinates
+                                      -w, -h, 1.0f,     0.0f, 1.0f,
                                       -w,  h, 1.0f,     0.0f, 0.0f,
                                        w,  h, 1.0f,     1.0f, 0.0f,
                                       -w, -h, 1.0f,     0.0f, 1.0f,

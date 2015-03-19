@@ -10,8 +10,19 @@ using Buffer = SharpDX.Direct3D11.Buffer;
 
 namespace DOFScene
 {
+    public struct Camera
+    {
+        public float nearPlaneZ;
+        public float farPlaneZ;
+        public float focusPlaneZ;
+        public float lensRadius;
+        public float fov; // rad
+    };
+
     public class Scene
     {
+        public Camera camera = new Camera();
+
         Vector3 eyePos;
         Matrix viewProj;
         List<Model> models;
@@ -37,8 +48,14 @@ namespace DOFScene
             eyePos = new Vector3(2.3f, 0.05f, -0.5f);
             var view = Matrix.LookAtLH(eyePos, eyePos + dir, Vector3.UnitY);
             //var view = Matrix.LookAtLH(new Vector3(0, 0, -2), new Vector3(0, 0, 0), Vector3.UnitY);
-            var proj = Matrix.PerspectiveFovLH((float)Math.PI * 30f / 180.0f, size.Width / (float)size.Height, 0.1f, 4000.0f);
+            var proj = Matrix.PerspectiveFovLH((float)Math.PI * 30f / 180.0f, size.Width / (float)size.Height, 0.1f, 20.0f);
             viewProj = Matrix.Multiply(view, proj);
+
+            camera.nearPlaneZ = -0.1f;
+            camera.farPlaneZ = -20.0f;
+            camera.focusPlaneZ = -0.75f;
+            camera.lensRadius = 0.01f;
+            camera.fov = (float)Math.PI * 30f / 180.0f;
 
             models = new List<Model>();
             // load model

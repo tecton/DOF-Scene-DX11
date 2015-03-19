@@ -63,7 +63,7 @@ namespace DOFScene
         {
             pinholeRenderer.Draw(scene, renderView);
             Texture2D.ToFile(context, pinholeRenderer.outputBuffer, ImageFileFormat.Bmp, "color.bmp");
-            dofRenderer.Draw(renderView, depthView, pinholeRenderer.outputBuffer, pinholeRenderer.depthSRV);
+            dofRenderer.Draw(renderView, depthView, pinholeRenderer.outputBuffer, pinholeRenderer.depthSRV, scene.camera);
             swapChain.Present(0, PresentFlags.None);
         }
 

@@ -30,6 +30,15 @@ PS_IN VS(VS_IN input)
 
 float4 PS(PS_IN input) : SV_Target
 {
+	float4 result;
 	float4 color = colorTexture.Sample(colorSampler, input.uv);
-	return color.aaaa;
+	result.rgb = color.aaa;
+	float r = color.a * 2.0 - 1.0;
+	if (r < 0) {
+		result.rgb = float3(0.0, 0.14, 0.8) * abs(r);
+	} else {
+		result.rgb = float3(1.0, 1.0, 0.15) * abs(r);
+	}
+	result.a = color.a;
+	return result;
 }
