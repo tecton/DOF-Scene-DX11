@@ -3,6 +3,11 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="MainWindow" Height="350" Width="525">
     <Grid>
-        
+        <RadioButton Content="Signed COC" HorizontalAlignment="Left" Margin="49,72,0,0" VerticalAlignment="Top" Checked="RadioButton_Checked_1"/>
+        <RadioButton Content="Final Result" HorizontalAlignment="Left" Margin="49,39,0,0" VerticalAlignment="Top" Checked="RadioButton_Checked_2" IsChecked="True"/>
+        <RadioButton Content="Near Buffer" HorizontalAlignment="Left" Margin="49,104,0,0" VerticalAlignment="Top" Checked="RadioButton_Checked_3"/>
+        <RadioButton Content="Pinhole" HorizontalAlignment="Left" Margin="49,137,0,0" VerticalAlignment="Top" Checked="RadioButton_Checked_4"/>
+        <RadioButton Content="Blurred" HorizontalAlignment="Left" Margin="49,169,0,0" VerticalAlignment="Top" Checked="RadioButton_Checked_5"/>
+
     </Grid>
 </Window>

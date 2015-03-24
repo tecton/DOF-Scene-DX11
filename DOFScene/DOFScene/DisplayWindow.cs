@@ -17,6 +17,15 @@ using MapFlags = SharpDX.Direct3D11.MapFlags;
 
 namespace DOFScene
 {
+    enum RenderMode
+    {
+        Result,
+        SignedCOC,
+        NearBuffer,
+        Pinhole,
+        Blurred
+    };
+
     class DisplayWindow
     {
         #region Display Form
@@ -59,18 +68,18 @@ namespace DOFScene
         #endregion
 
         #region Interfaces
-        public void Draw()
+        public void Draw(RenderMode renderMode)
         {
             pinholeRenderer.Draw(scene, renderView);
             Texture2D.ToFile(context, pinholeRenderer.outputBuffer, ImageFileFormat.Bmp, "color.bmp");
-            dofRenderer.Draw(renderView, depthView, pinholeRenderer.outputBuffer, pinholeRenderer.depthSRV, scene.camera);
+            dofRenderer.Draw(renderView, depthView, pinholeRenderer.outputBuffer, pinholeRenderer.depthSRV, scene.camera, renderMode);
             swapChain.Present(0, PresentFlags.None);
         }
 
         public void showWindow()
         {
             form.Show();
-            Draw();
+            Draw(RenderMode.Result);
         }
 
         public void hideWindow()

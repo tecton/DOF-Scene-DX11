@@ -22,6 +22,8 @@ namespace DOFScene
     {
         private DisplayWindow displayWindow = new DisplayWindow();
 
+        RenderMode renderMode;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -36,7 +38,39 @@ namespace DOFScene
                 this.Top = corner.Y - this.ActualHeight;
             };
             displayWindow.showWindow();
-            displayWindow.Draw();
+            displayWindow.Draw(renderMode);
         }
+
+        private void RadioButton_Checked_1(object sender, RoutedEventArgs e)
+        {
+            renderMode = RenderMode.SignedCOC;
+            displayWindow.Draw(renderMode);
+        }
+
+        private void RadioButton_Checked_2(object sender, RoutedEventArgs e)
+        {
+            renderMode = RenderMode.Result;
+            displayWindow.Draw(renderMode);
+        }
+
+        private void RadioButton_Checked_3(object sender, RoutedEventArgs e)
+        {
+            renderMode = RenderMode.NearBuffer;
+            displayWindow.Draw(renderMode);
+        }
+
+        private void RadioButton_Checked_4(object sender, RoutedEventArgs e)
+        {
+            renderMode = RenderMode.Pinhole;
+            displayWindow.Draw(renderMode);
+        }
+
+        private void RadioButton_Checked_5(object sender, RoutedEventArgs e)
+        {
+            renderMode = RenderMode.Blurred;
+            displayWindow.Draw(renderMode);
+        }
+
+
     }
 }

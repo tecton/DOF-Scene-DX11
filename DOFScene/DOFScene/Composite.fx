@@ -15,8 +15,16 @@ cbuffer cbPerObject : register (b0)
 	float4x4 gWorldViewProj;
 };
 
+cbuffer RenderMode : register (b1)
+{
+	int renderMode;
+};
+
 Texture2D colorTexture : register (t0);
-SamplerState colorSampler;
+Texture2D blurTexture : register (t1);
+Texture2D nearTexture : register (t2);
+
+SamplerState textureSampler;
 
 PS_IN VS(VS_IN input)
 {
@@ -28,17 +36,75 @@ PS_IN VS(VS_IN input)
 	return output;
 }
 
+// Boost the coverage of the near field by this factor.  Should always be >= 1
+//
+// Make this larger if near-field objects seem too transparent
+//
+// Make this smaller if an obvious line is visible between the near-field blur and the mid-field sharp region
+// when looking at a textured ground plane.
+static const float coverageBoost = 1.5f;
+
+float grayscale(float3 c) {
+    return (c.r + c.g + c.b) / 3.0;
+}
+
 float4 PS(PS_IN input) : SV_Target
 {
-	float4 result;
-	float4 color = colorTexture.Sample(colorSampler, input.uv);
-	result.rgb = color.aaa;
-	float r = color.a * 2.0 - 1.0;
-	if (r < 0) {
-		result.rgb = float3(0.0, 0.14, 0.8) * abs(r);
-	} else {
-		result.rgb = float3(1.0, 1.0, 0.15) * abs(r);
+	float3 result;
+    float4 pack  = colorTexture.Sample(textureSampler, input.uv);
+    float3 sharp   = pack.rgb;
+    float3 blurred = blurTexture.Sample(textureSampler, input.uv).rgb;
+    float4 near    = nearTexture.Sample(textureSampler, input.uv);
+
+    // Normalized Radius
+    float normRadius = (pack.a * 2.0 - 1.0);
+
+    // Boost the blur factor
+    //normRadius = clamp(normRadius * 2.0, -1.0, 1.0);
+
+    if (coverageBoost != 1.0) {
+        float a = saturate(coverageBoost * near.a);
+		float b = (a / max(near.a, 0.001f));
+        near.rgb = near.rgb * float3(b, b, b);
+        near.a = a;
+    }
+
+    // Decrease sharp image's contribution rapidly in the near field
+    if (normRadius > 0.1) {
+        normRadius = min(normRadius * 1.5, 1.0);
+    }
+
+    result = near.rgb;
+	float3 v;
+	v.x = lerp(sharp.x, blurred.x, abs(normRadius));
+	v.y = lerp(sharp.y, blurred.y, abs(normRadius));
+	v.z = lerp(sharp.z, blurred.z, abs(normRadius));
+	result += v * float3(1.0 - near.a, 1.0 - near.a, 1.0 - near.a);
+
+	switch (renderMode) {
+	case 1:
+		{
+			float r = pack.a * 2.0 - 1.0;
+			if (r < 0) {
+				result.rgb = float3(0.0, 0.14, 0.8) * abs(r);
+			} else {
+				result.rgb = float3(1.0, 1.0, 0.15) * abs(r);
+			}
+		}
+		break;
+	case 2:
+		{
+			result = near.rgb;
+		}
+		break;
+	case 3:
+		result = sharp.rgb;
+		break;
+	case 4:
+		result = blurred;
+		break;
 	}
-	result.a = color.a;
-	return result;
+
+	return float4(result, 1.0f);
 }
+
