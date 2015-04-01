@@ -21,13 +21,15 @@ namespace DOFScene
         public Matrix worldViewProj;
     };
 
+    // used in pinhole camera coc
     public struct CameraInfoConstants
     {
         public Vector4 clipInfo;
         public float focusPlaneZ;
-        public Vector3 padding;
+        public Vector3 frustum;
     };
 
+    // used in pinhole camera blur
     public struct BlurConstants
     {
         public Vector2 textureSize;
@@ -38,10 +40,19 @@ namespace DOFScene
         public float padding;
     };
 
+    // used in composite shader
     public struct CompositeConstants
     {
         public int renderMode;
         public Vector3 padding;
+    };
+
+    // used in vision hidden layer1
+    public struct EyeParamConstants
+    {
+        public float focus;
+        public float pupil;
+        public Vector2 padding;
     };
 
     class DOFRenderer
@@ -52,15 +63,25 @@ namespace DOFScene
 
         InputLayout layout;
 
+        #region Shaders
         VertexShader cocVertexShader;
         PixelShader cocPixelShader;
         VertexShader compositeVertexShader;
         PixelShader compositePixelShader;
+
         VertexShader horizontalBlurVertexShader;
         PixelShader horizontalBlurPixelShader;
         VertexShader verticalBlurVertexShader;
         PixelShader verticalBlurPixelShader;
 
+        PixelShader visionInputLayerPixelShader;
+        PixelShader visionHiddenLayer1PixelShader;
+        PixelShader visionHiddenLayer2PixelShader;
+        PixelShader visionOutputLayerPixelShader;
+        #endregion
+
+        #region Texture Buffers
+        // Pinhole Camera CoC Buffer, colour + packed coc
         Texture2D cocBuffer;
         RenderTargetView cocBufferRTV;
         ShaderResourceView cocBufferSRV;
@@ -77,9 +98,32 @@ namespace DOFScene
         ShaderResourceView vBlurBufferSRV;
         RenderTargetView vBlurRTV;
 
+        // Human Vision BPNN Texture, 4 parameters packed
+        Texture2D visionParamBuffer;
+        RenderTargetView visionParamBufferRTV;
+        ShaderResourceView visionParamBufferSRV;
+
+        // hidden layer 1 output result, 12 values packed in 3 textures.
+        Texture2D[] visionHiddenLayer1Output;
+        RenderTargetView[] visionHiddenLayer1OutputRTV;
+        ShaderResourceView[] visionHiddenLayer1OutputSRV;
+
+        // hidden layer 2 output result. 12 values.
+        Texture2D[] visionHiddenLayer2Output;
+        RenderTargetView[] visionHiddenLayer2OutputRTV;
+        ShaderResourceView[] visionHiddenLayer2OutputSRV;
+
+        // output layer output result. 2 values.
+        Texture2D visionOutputLayerOutput;
+        RenderTargetView visionOutputLayerOutputRTV;
+        ShaderResourceView visionOutputLayerOutputSRV;
+
+        #endregion
+
         int rectVertexSize = 20;
         Buffer rectVertexBuffer;
 
+        #region Shader Constants
         Buffer positionConstantBuffer;
         PositionConstants dofConstants = new PositionConstants();
         Buffer cameraConstantBuffer;
@@ -88,6 +132,10 @@ namespace DOFScene
         BlurConstants blurConstants = new BlurConstants();
         Buffer compositeConstantBuffer;
         CompositeConstants compositeConstants = new CompositeConstants();
+        Buffer eyeParamConstantBuffer;
+        EyeParamConstants eyeParamConstants = new EyeParamConstants();
+
+        #endregion
 
         void drawCoCPass(RenderTargetView renderView, DepthStencilView depthView, ShaderResourceView colorSRV, ShaderResourceView depthSRV)
         {
@@ -103,6 +151,45 @@ namespace DOFScene
 
             context.PixelShader.SetShaderResource(0, depthSRV);
             context.PixelShader.SetShaderResource(1, colorSRV);
+
+            //draw
+            context.Draw(6, 0);
+        }
+
+        void drawVisionInputPass(RenderTargetView renderView, DepthStencilView depthView, ShaderResourceView depthSRV)
+        {
+            // reuse coc vertex shader
+            context.VertexShader.Set(cocVertexShader);
+            context.VertexShader.SetConstantBuffer(0, positionConstantBuffer);
+            context.PixelShader.Set(visionInputLayerPixelShader);
+            context.PixelShader.SetConstantBuffer(0, cameraConstantBuffer);
+            context.OutputMerger.SetRenderTargets(depthView, renderView);
+
+            // Clear views
+            context.ClearDepthStencilView(depthView, DepthStencilClearFlags.Depth, 1.0f, 0);
+            context.ClearRenderTargetView(renderView, Color.Black);
+
+            context.PixelShader.SetShaderResource(0, depthSRV);
+
+            //draw
+            context.Draw(6, 0);
+        }
+
+        void drawVisionHiddenLayer1Pass(RenderTargetView[] renderView, DepthStencilView depthView, ShaderResourceView visionInputParamSRV)
+        {
+            // reuse coc vertex shader
+            context.VertexShader.Set(cocVertexShader);
+            context.VertexShader.SetConstantBuffer(0, positionConstantBuffer);
+            context.PixelShader.Set(visionHiddenLayer1PixelShader);
+            context.PixelShader.SetConstantBuffer(0, eyeParamConstantBuffer);
+            context.OutputMerger.SetTargets(renderView);
+
+            // Clear views
+            context.ClearDepthStencilView(depthView, DepthStencilClearFlags.Depth, 1.0f, 0);
+            foreach (RenderTargetView rv in renderView)
+                context.ClearRenderTargetView(rv, Color.Black);
+
+            context.PixelShader.SetShaderResource(0, visionInputParamSRV);
 
             //draw
             context.Draw(6, 0);
@@ -169,16 +256,17 @@ namespace DOFScene
             context.Draw(6, 0);
         }
 
-        public void Draw(RenderTargetView renderView, DepthStencilView depthView, Texture2D colorBuffer, ShaderResourceView depthSRV, Camera camera, RenderMode renderMode)
+        public void Draw(RenderTargetView renderView, DepthStencilView depthView, Texture2D colorBuffer, ShaderResourceView depthSRV, Camera camera, float focus, float pupil, RenderMode renderMode)
         {
             // Prepare All the stages
             context.InputAssembler.InputLayout = layout;
             context.Rasterizer.SetViewport(new Viewport(0, 0, displaySize.Width, displaySize.Height, 0.0f, 1.0f));
             ShaderResourceView colorSRV = new ShaderResourceView(device, colorBuffer);
 
+            #region Prepare Shader Constants
             DataStream stream;
-            DataBox databox = context.MapSubresource(positionConstantBuffer, 0, MapMode.WriteDiscard, SharpDX.Direct3D11.MapFlags.None, out stream);
 
+            DataBox databox = context.MapSubresource(positionConstantBuffer, 0, MapMode.WriteDiscard, SharpDX.Direct3D11.MapFlags.None, out stream);
             if (!databox.IsEmpty)
                 stream.Write(dofConstants);
             context.UnmapSubresource(positionConstantBuffer, 0);
@@ -191,33 +279,61 @@ namespace DOFScene
                 z_n * z_f,  z_n - z_f,  z_f, scale);
             cameraInfoConstants.focusPlaneZ = camera.focusPlaneZ;
 
-            databox = context.MapSubresource(cameraConstantBuffer, 0, MapMode.WriteDiscard, SharpDX.Direct3D11.MapFlags.None, out stream);
+		    float top = (float)(z_f * Math.Tan(camera.fov / 2));
+		    float right = top / camera.height * camera.width;
+            cameraInfoConstants.frustum = new Vector3(right, top, z_f);
 
+            databox = context.MapSubresource(cameraConstantBuffer, 0, MapMode.WriteDiscard, SharpDX.Direct3D11.MapFlags.None, out stream);
             if (!databox.IsEmpty)
                 stream.Write(cameraInfoConstants);
             context.UnmapSubresource(cameraConstantBuffer, 0);
 
             databox = context.MapSubresource(blurConstantBuffer, 0, MapMode.WriteDiscard, SharpDX.Direct3D11.MapFlags.None, out stream);
-
             if (!databox.IsEmpty)
                 stream.Write(blurConstants);
             context.UnmapSubresource(blurConstantBuffer, 0);
 
-            context.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(rectVertexBuffer, rectVertexSize, 0));
-
             databox = context.MapSubresource(compositeConstantBuffer, 0, MapMode.WriteDiscard, SharpDX.Direct3D11.MapFlags.None, out stream);
-
-            compositeConstants.renderMode = (int)renderMode;
+            //compositeConstants.renderMode = (int)renderMode;
+            compositeConstants.renderMode = (int)RenderMode.VisionParam;
             if (!databox.IsEmpty)
                 stream.Write(compositeConstants);
             context.UnmapSubresource(compositeConstantBuffer, 0);
 
+            eyeParamConstants.focus = focus;
+            eyeParamConstants.pupil = pupil;
+            databox = context.MapSubresource(eyeParamConstantBuffer, 0, MapMode.WriteDiscard, SharpDX.Direct3D11.MapFlags.None, out stream);
+            if (!databox.IsEmpty)
+                stream.Write(eyeParamConstants);
+            context.UnmapSubresource(eyeParamConstantBuffer, 0);
+            #endregion
+
             context.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(rectVertexBuffer, rectVertexSize, 0));
 
-            drawCoCPass(cocBufferRTV, depthView, colorSRV, depthSRV);
-            drawHorizontalBlurPass(depthView, cocBufferSRV);
-            drawVerticalBlurPass(depthView, hBlurBufferSRV, hNearBufferSRV);
-            drawCompositePass(renderView, depthView, cocBufferSRV, vBlurBufferSRV, vNearBufferSRV, renderMode);
+            //drawCoCPass(cocBufferRTV, depthView, colorSRV, depthSRV);
+            //drawHorizontalBlurPass(depthView, cocBufferSRV);
+            //drawVerticalBlurPass(depthView, hBlurBufferSRV, hNearBufferSRV);
+            //drawCompositePass(renderView, depthView, cocBufferSRV, vBlurBufferSRV, vNearBufferSRV, renderMode);
+            drawVisionInputPass(visionParamBufferRTV, depthView, depthSRV);
+            drawVisionHiddenLayer1Pass(visionHiddenLayer1OutputRTV, depthView, visionParamBufferSRV);
+            drawCompositePass(renderView, depthView, visionHiddenLayer1OutputSRV[0], vBlurBufferSRV, vNearBufferSRV, renderMode);
+        }
+
+        private Texture2D createTextureBuffer(int splitW, int splitH)
+        {
+            return new Texture2D(device, new Texture2DDescription()
+            {
+                Format = Format.R32G32B32A32_Float,
+                ArraySize = 1,
+                MipLevels = 1,
+                Width = displaySize.Width / splitW,
+                Height = displaySize.Height / splitH,
+                SampleDescription = new SampleDescription(1, 0),
+                Usage = ResourceUsage.Default,
+                BindFlags = BindFlags.RenderTarget | BindFlags.ShaderResource,
+                CpuAccessFlags = CpuAccessFlags.None,
+                OptionFlags = ResourceOptionFlags.None
+            });
         }
 
         public void Init(Device device, DeviceContext context, System.Drawing.Size size)
@@ -247,10 +363,19 @@ namespace DOFScene
             var verticalBlurPixelShaderByteCode = ShaderBytecode.CompileFromFile("VVDoF_vertical.fx", "PS", "ps_5_0");
             verticalBlurPixelShader = new PixelShader(device, verticalBlurPixelShaderByteCode);
 
+            //var visionInputVertexShaderByteCode = ShaderBytecode.CompileFromFile("VisionInput.fx", "VS", "vs_5_0");
+            //visionInputLayerVertexShader = new VertexShader(device, visionInputVertexShaderByteCode);
+            var visionInputPixelShaderByteCode = ShaderBytecode.CompileFromFile("VisionInput.fx", "PS", "ps_5_0");
+            visionInputLayerPixelShader = new PixelShader(device, visionInputPixelShaderByteCode);
+
+            var visionHiddenLayer1PixelShaderByteCode = ShaderBytecode.CompileFromFile("VisionHiddenLayer1.fx", "PS", "ps_5_0");
+            visionHiddenLayer1PixelShader = new PixelShader(device, visionHiddenLayer1PixelShaderByteCode);
+
             positionConstantBuffer = new Buffer(device, Utilities.SizeOf<PositionConstants>(), ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0);
             cameraConstantBuffer = new Buffer(device, Utilities.SizeOf<CameraInfoConstants>(), ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0);
             blurConstantBuffer = new Buffer(device, Utilities.SizeOf<BlurConstants>(), ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0);
             compositeConstantBuffer = new Buffer(device, Utilities.SizeOf<CompositeConstants>(), ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0);
+            eyeParamConstantBuffer = new Buffer(device, Utilities.SizeOf<EyeParamConstants>(), ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0);
 
             blurConstants.nearBlurRadiusPixels = 12.0f;
             blurConstants.maxCoCRadiusPixels = 12.0f;
@@ -265,85 +390,41 @@ namespace DOFScene
                         new InputElement("TEXCOORD", 0, Format.R32G32_Float, 12, 0)
                     });
 
-            cocBuffer = new Texture2D(device, new Texture2DDescription()
-            {
-                Format = Format.R32G32B32A32_Float,
-                ArraySize = 1,
-                MipLevels = 1,
-                Width = displaySize.Width,
-                Height = displaySize.Height,
-                SampleDescription = new SampleDescription(1, 0),
-                Usage = ResourceUsage.Default,
-                BindFlags = BindFlags.RenderTarget | BindFlags.ShaderResource,
-                CpuAccessFlags = CpuAccessFlags.None,
-                OptionFlags = ResourceOptionFlags.None
-            });
+            cocBuffer = createTextureBuffer(1, 1);
             cocBufferRTV = new RenderTargetView(device, cocBuffer);
             cocBufferSRV = new ShaderResourceView(device, cocBuffer);
 
-            hNearBuffer = new Texture2D(device, new Texture2DDescription()
-            {
-                Format = Format.R32G32B32A32_Float,
-                ArraySize = 1,
-                MipLevels = 1,
-                Width = displaySize.Width / 2,
-                Height = displaySize.Height,
-                SampleDescription = new SampleDescription(1, 0),
-                Usage = ResourceUsage.Default,
-                BindFlags = BindFlags.RenderTarget | BindFlags.ShaderResource,
-                CpuAccessFlags = CpuAccessFlags.None,
-                OptionFlags = ResourceOptionFlags.None
-            });
+            hNearBuffer = createTextureBuffer(2, 1);
             hNearBufferSRV = new ShaderResourceView(device, hNearBuffer);
             hNearRTV = new RenderTargetView(device, hNearBuffer);
 
-            hBlurBuffer = new Texture2D(device, new Texture2DDescription()
-            {
-                Format = Format.R32G32B32A32_Float,
-                ArraySize = 1,
-                MipLevels = 1,
-                Width = displaySize.Width / 2,
-                Height = displaySize.Height,
-                SampleDescription = new SampleDescription(1, 0),
-                Usage = ResourceUsage.Default,
-                BindFlags = BindFlags.RenderTarget | BindFlags.ShaderResource,
-                CpuAccessFlags = CpuAccessFlags.None,
-                OptionFlags = ResourceOptionFlags.None
-            });
+            hBlurBuffer = createTextureBuffer(2, 1);
             hBlurBufferSRV = new ShaderResourceView(device, hBlurBuffer);
             hBlurRTV = new RenderTargetView(device, hBlurBuffer);
 
-            vNearBuffer = new Texture2D(device, new Texture2DDescription()
-            {
-                Format = Format.R32G32B32A32_Float,
-                ArraySize = 1,
-                MipLevels = 1,
-                Width = displaySize.Width / 2,
-                Height = displaySize.Height / 2,
-                SampleDescription = new SampleDescription(1, 0),
-                Usage = ResourceUsage.Default,
-                BindFlags = BindFlags.RenderTarget | BindFlags.ShaderResource,
-                CpuAccessFlags = CpuAccessFlags.None,
-                OptionFlags = ResourceOptionFlags.None
-            });
+            vNearBuffer = createTextureBuffer(2, 2);
             vNearBufferSRV = new ShaderResourceView(device, vNearBuffer);
             vNearRTV = new RenderTargetView(device, vNearBuffer);
 
-            vBlurBuffer = new Texture2D(device, new Texture2DDescription()
-            {
-                Format = Format.R32G32B32A32_Float,
-                ArraySize = 1,
-                MipLevels = 1,
-                Width = displaySize.Width / 2,
-                Height = displaySize.Height / 2,
-                SampleDescription = new SampleDescription(1, 0),
-                Usage = ResourceUsage.Default,
-                BindFlags = BindFlags.RenderTarget | BindFlags.ShaderResource,
-                CpuAccessFlags = CpuAccessFlags.None,
-                OptionFlags = ResourceOptionFlags.None
-            });
+            vBlurBuffer = createTextureBuffer(2, 2);
             vBlurBufferSRV = new ShaderResourceView(device, vBlurBuffer);
             vBlurRTV = new RenderTargetView(device, vBlurBuffer);
+
+            visionParamBuffer = createTextureBuffer(1, 1);
+            visionParamBufferSRV = new ShaderResourceView(device, visionParamBuffer);
+            visionParamBufferRTV = new RenderTargetView(device, visionParamBuffer);
+
+            visionHiddenLayer1Output = new Texture2D[3];
+            visionHiddenLayer1OutputRTV = new RenderTargetView[3];
+            visionHiddenLayer1OutputSRV = new ShaderResourceView[3];
+            for (int i = 0; i < 3; ++i)
+            {
+                visionHiddenLayer1Output[i] = createTextureBuffer(1, 1);
+                visionHiddenLayer1OutputSRV[i] = new ShaderResourceView(device, visionHiddenLayer1Output[i]);
+                visionHiddenLayer1OutputRTV[i] = new RenderTargetView(device, visionHiddenLayer1Output[i]);
+            }
+
+
 
             float ratio = (float)displaySize.Height / displaySize.Width;
             float w = (float)displaySize.Width * 0.5f, h = (float)displaySize.Height * 0.5f;

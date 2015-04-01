@@ -23,6 +23,8 @@ namespace DOFScene
         private DisplayWindow displayWindow = new DisplayWindow();
 
         RenderMode renderMode;
+        float focus;
+        float pupil;
 
         public MainWindow()
         {
@@ -38,37 +40,55 @@ namespace DOFScene
                 this.Top = corner.Y - this.ActualHeight;
             };
             displayWindow.showWindow();
-            displayWindow.Draw(renderMode);
+            //displayWindow.Draw(renderMode);
         }
 
         private void RadioButton_Checked_1(object sender, RoutedEventArgs e)
         {
             renderMode = RenderMode.SignedCOC;
-            displayWindow.Draw(renderMode);
+            displayWindow.Draw(renderMode, focus, pupil);
         }
 
         private void RadioButton_Checked_2(object sender, RoutedEventArgs e)
         {
             renderMode = RenderMode.Result;
-            displayWindow.Draw(renderMode);
+            displayWindow.Draw(renderMode, focus, pupil);
         }
 
         private void RadioButton_Checked_3(object sender, RoutedEventArgs e)
         {
             renderMode = RenderMode.NearBuffer;
-            displayWindow.Draw(renderMode);
+            displayWindow.Draw(renderMode, focus, pupil);
         }
 
         private void RadioButton_Checked_4(object sender, RoutedEventArgs e)
         {
             renderMode = RenderMode.Pinhole;
-            displayWindow.Draw(renderMode);
+            displayWindow.Draw(renderMode, focus, pupil);
         }
 
         private void RadioButton_Checked_5(object sender, RoutedEventArgs e)
         {
             renderMode = RenderMode.Blurred;
-            displayWindow.Draw(renderMode);
+            displayWindow.Draw(renderMode, focus, pupil);
+        }
+
+        private void RadioButton_Checked_6(object sender, RoutedEventArgs e)
+        {
+            renderMode = RenderMode.VisionParam;
+            displayWindow.Draw(renderMode, focus, pupil);
+        }
+
+        private void Slider_ValueChanged_1(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            focus = (float)e.NewValue;
+            displayWindow.Draw(renderMode, focus, pupil);
+        }
+
+        private void Slider_ValueChanged_2(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            pupil = (float)e.NewValue;
+            displayWindow.Draw(renderMode, focus, pupil);
         }
 
 

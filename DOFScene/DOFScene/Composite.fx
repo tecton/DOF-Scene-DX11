@@ -103,6 +103,9 @@ float4 PS(PS_IN input) : SV_Target
 	case 4:
 		result = blurred;
 		break;
+	case 5:
+		result = pack.rgb;
+		break;
 	}
 
 	return float4(result, 1.0f);

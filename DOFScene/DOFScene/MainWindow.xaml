@@ -8,6 +8,13 @@
         <RadioButton Content="Near Buffer" HorizontalAlignment="Left" Margin="49,104,0,0" VerticalAlignment="Top" Checked="RadioButton_Checked_3"/>
         <RadioButton Content="Pinhole" HorizontalAlignment="Left" Margin="49,137,0,0" VerticalAlignment="Top" Checked="RadioButton_Checked_4"/>
         <RadioButton Content="Blurred" HorizontalAlignment="Left" Margin="49,169,0,0" VerticalAlignment="Top" Checked="RadioButton_Checked_5"/>
+        <RadioButton Content="Custom" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="49,199,0,0" Checked="RadioButton_Checked_6"/>
+        <Slider HorizontalAlignment="Left" Margin="325,43,0,0" VerticalAlignment="Top" Width="167" Maximum="5000" Minimum="120" SmallChange="1" Value="720" ValueChanged="Slider_ValueChanged_1"/>
+        <Label Content="Focus:" HorizontalAlignment="Left" Margin="198,39,0,0" VerticalAlignment="Top"/>
+        <Label Content="Pupil:" HorizontalAlignment="Left" Margin="198,94,0,0" VerticalAlignment="Top"/>
+        <Slider HorizontalAlignment="Left" VerticalAlignment="Top" Margin="325,97,0,0" Width="167" Maximum="8" Minimum="2" Value="4" SmallChange="1" ValueChanged="Slider_ValueChanged_2"/>
+        <TextBox HorizontalAlignment="Left" Height="23" Margin="261,41,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="42"/>
+        <TextBox HorizontalAlignment="Left" Height="23" Margin="261,96,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="42"/>
 
     </Grid>
 </Window>

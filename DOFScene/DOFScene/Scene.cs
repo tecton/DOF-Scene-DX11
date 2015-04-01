@@ -17,6 +17,8 @@ namespace DOFScene
         public float focusPlaneZ;
         public float lensRadius;
         public float fov; // rad
+        public float width;
+        public float height;
     };
 
     public class Scene
@@ -56,6 +58,8 @@ namespace DOFScene
             camera.focusPlaneZ = -0.75f;
             camera.lensRadius = 0.01f;
             camera.fov = (float)Math.PI * 30f / 180.0f;
+            camera.width = size.Width;
+            camera.height = size.Height;
 
             models = new List<Model>();
             // load model
