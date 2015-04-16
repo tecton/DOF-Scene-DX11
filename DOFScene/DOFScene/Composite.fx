@@ -23,6 +23,10 @@ cbuffer RenderMode : register (b1)
 Texture2D colorTexture : register (t0);
 Texture2D blurTexture : register (t1);
 Texture2D nearTexture : register (t2);
+Texture2D paramTexture : register (t3);
+Texture2D visionBlurTexture : register (t4);
+Texture2D visionNearTexture : register (t5);
+Texture2D visionCoCTexture : register (t6);
 
 SamplerState textureSampler;
 
@@ -48,7 +52,7 @@ float grayscale(float3 c) {
     return (c.r + c.g + c.b) / 3.0;
 }
 
-float4 PS(PS_IN input) : SV_Target
+float4 pinholeResult(PS_IN input)
 {
 	float3 result;
     float4 pack  = colorTexture.Sample(textureSampler, input.uv);
@@ -69,7 +73,7 @@ float4 PS(PS_IN input) : SV_Target
         near.a = a;
     }
 
-    // Decrease sharp image's contribution rapidly in the near field
+	// Decrease sharp image's contribution rapidly in the near field
     if (normRadius > 0.1) {
         normRadius = min(normRadius * 1.5, 1.0);
     }
@@ -103,11 +107,82 @@ float4 PS(PS_IN input) : SV_Target
 	case 4:
 		result = blurred;
 		break;
+	}
+	return float4(result, 1.0f);
+}
+
+float4 visionResult(PS_IN input)
+{
+	float3 result;
+	float4 coc = visionCoCTexture.Sample(textureSampler, input.uv);
+    float4 pack  = colorTexture.Sample(textureSampler, input.uv);
+    float3 sharp   = pack.rgb;
+    float3 blurred = visionBlurTexture.Sample(textureSampler, input.uv).rgb;
+    float4 near    = visionNearTexture.Sample(textureSampler, input.uv);
+
+    // Normalized Radius
+    float normRadius = (coc.x * 2.0 - 1.0);
+
+    // Boost the blur factor
+    //normRadius = clamp(normRadius * 2.0, -1.0, 1.0);
+
+    if (coverageBoost != 1.0) {
+        float a = saturate(coverageBoost * near.a);
+		float b = (a / max(near.a, 0.001f));
+        near.rgb = near.rgb * float3(b, b, b);
+        near.a = a;
+    }
+
+	// Decrease sharp image's contribution rapidly in the near field
+    if (normRadius > 0.1) {
+        normRadius = min(normRadius * 1.5, 1.0);
+    }
+
+    result = near.rgb;
+	float3 v;
+	v.x = lerp(sharp.x, blurred.x, abs(normRadius));
+	v.y = lerp(sharp.y, blurred.y, abs(normRadius));
+	v.z = lerp(sharp.z, blurred.z, abs(normRadius));
+	result += v * float3(1.0 - near.a, 1.0 - near.a, 1.0 - near.a);
+
+
+	switch (renderMode) {
 	case 5:
-		result = pack.rgb;
-		break;
+		{
+			float4 s = paramTexture.Sample(textureSampler, input.uv);
+			float r = s.r / 5000;
+			result.rgb = float3(r, r, r);
+			break;
+		}
+	case 7:
+		{
+			float r = coc.x * 2.0 - 1.0;
+			if (r < 0) {
+				result.rgb = float3(0.0, 0.14, 0.8) * abs(r);
+			} else {
+				result.rgb = float3(1.0, 1.0, 0.15) * abs(r);
+			}
+			break;
+		}
+	case 8:
+		{
+			float r = coc.y * 2.0 - 1.0;
+			if (r < 0) {
+				result.rgb = float3(0.0, 0.14, 0.8) * abs(r);
+			} else {
+				result.rgb = float3(1.0, 1.0, 0.15) * abs(r);
+			}
+			break;
+		}
 	}
 
 	return float4(result, 1.0f);
 }
 
+float4 PS(PS_IN input) : SV_Target
+{
+	if (renderMode < 5)
+		return pinholeResult(input);
+	else
+		return visionResult(input);
+}

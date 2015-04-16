@@ -78,6 +78,9 @@ namespace DOFScene
         PixelShader visionHiddenLayer1PixelShader;
         PixelShader visionHiddenLayer2PixelShader;
         PixelShader visionOutputLayerPixelShader;
+
+        PixelShader visionHorizontalBlurPixelShader;
+        PixelShader visionVerticalBlurPixelShader;
         #endregion
 
         #region Texture Buffers
@@ -117,6 +120,19 @@ namespace DOFScene
         Texture2D visionOutputLayerOutput;
         RenderTargetView visionOutputLayerOutputRTV;
         ShaderResourceView visionOutputLayerOutputSRV;
+
+        Texture2D visionHNearBuffer;
+        RenderTargetView visionHNearRTV;
+        ShaderResourceView visionHNearBufferSRV;
+        Texture2D visionHBlurBuffer;
+        ShaderResourceView visionHBlurBufferSRV;
+        RenderTargetView visionHBlurRTV;
+        Texture2D visionVNearBuffer;
+        RenderTargetView visionVNearRTV;
+        ShaderResourceView visionVNearBufferSRV;
+        Texture2D visionVBlurBuffer;
+        ShaderResourceView visionVBlurBufferSRV;
+        RenderTargetView visionVBlurRTV;
 
         #endregion
 
@@ -195,6 +211,47 @@ namespace DOFScene
             context.Draw(6, 0);
         }
 
+        void drawVisionHiddenLayer2Pass(RenderTargetView[] renderView, DepthStencilView depthView, ShaderResourceView[] visionInputParamSRV)
+        {
+            // reuse coc vertex shader
+            context.VertexShader.Set(cocVertexShader);
+            context.VertexShader.SetConstantBuffer(0, positionConstantBuffer);
+            context.PixelShader.Set(visionHiddenLayer2PixelShader);
+            context.OutputMerger.SetTargets(renderView);
+
+            // Clear views
+            context.ClearDepthStencilView(depthView, DepthStencilClearFlags.Depth, 1.0f, 0);
+            foreach (RenderTargetView rv in renderView)
+                context.ClearRenderTargetView(rv, Color.Black);
+
+            for (int i = 0; i < visionInputParamSRV.Length; ++i)
+                context.PixelShader.SetShaderResource(i, visionInputParamSRV[i]);
+
+            //draw
+            context.Draw(6, 0);
+        }
+
+        void drawVisionOutputLayerPass(RenderTargetView renderView, DepthStencilView depthView,
+            ShaderResourceView[] visionInputParamSRV, ShaderResourceView visionParamSRV)
+        {
+            // reuse coc vertex shader
+            context.VertexShader.Set(cocVertexShader);
+            context.VertexShader.SetConstantBuffer(0, positionConstantBuffer);
+            context.PixelShader.Set(visionOutputLayerPixelShader);
+            context.OutputMerger.SetTargets(renderView);
+
+            // Clear views
+            context.ClearDepthStencilView(depthView, DepthStencilClearFlags.Depth, 1.0f, 0);
+            context.ClearRenderTargetView(renderView, Color.Black);
+
+            for (int i = 0; i < visionInputParamSRV.Length; ++i)
+                context.PixelShader.SetShaderResource(i, visionInputParamSRV[i]);
+            context.PixelShader.SetShaderResource(visionInputParamSRV.Length, visionParamSRV);
+
+            //draw
+            context.Draw(6, 0);
+        }
+
         void drawHorizontalBlurPass(DepthStencilView depthView, ShaderResourceView blurInputSRV)
         {
             context.VertexShader.Set(horizontalBlurVertexShader);
@@ -210,6 +267,27 @@ namespace DOFScene
             context.ClearRenderTargetView(hNearRTV, Color.Black);
 
             context.PixelShader.SetShaderResource(0, blurInputSRV);
+
+            //draw
+            context.Draw(6, 0);
+        }
+
+        void drawVisionHorizontalBlurPass(DepthStencilView depthView, ShaderResourceView blurInputSRV, ShaderResourceView visionCocSRV)
+        {
+            context.VertexShader.Set(horizontalBlurVertexShader);
+            context.VertexShader.SetConstantBuffer(0, positionConstantBuffer);
+            context.PixelShader.Set(visionHorizontalBlurPixelShader);
+            context.PixelShader.SetConstantBuffer(0, blurConstantBuffer);
+            var targets = new RenderTargetView[] { visionHBlurRTV, visionHNearRTV };
+            context.OutputMerger.SetTargets(targets);
+
+            // Clear views
+            context.ClearDepthStencilView(depthView, DepthStencilClearFlags.Depth, 1.0f, 0);
+            context.ClearRenderTargetView(visionHBlurRTV, Color.Black);
+            context.ClearRenderTargetView(visionHNearRTV, Color.Black);
+
+            context.PixelShader.SetShaderResource(0, blurInputSRV);
+            context.PixelShader.SetShaderResource(1, visionCocSRV);
 
             //draw
             context.Draw(6, 0);
@@ -236,7 +314,31 @@ namespace DOFScene
             context.Draw(6, 0);
         }
 
-        void drawCompositePass(RenderTargetView renderView, DepthStencilView depthView, ShaderResourceView textureSRV, ShaderResourceView blurSRV, ShaderResourceView nearSRV, RenderMode renderMode)
+        void drawVisionVerticalBlurPass(DepthStencilView depthView, ShaderResourceView blurInputSRV, ShaderResourceView nearInputSRV)
+        {
+            context.VertexShader.Set(verticalBlurVertexShader);
+            context.VertexShader.SetConstantBuffer(0, positionConstantBuffer);
+            context.PixelShader.Set(verticalBlurPixelShader);
+            context.PixelShader.SetConstantBuffer(1, blurConstantBuffer);
+            var targets = new RenderTargetView[] { visionVBlurRTV, visionVNearRTV };
+            context.OutputMerger.SetTargets(targets);
+
+            // Clear views
+            context.ClearDepthStencilView(depthView, DepthStencilClearFlags.Depth, 1.0f, 0);
+            context.ClearRenderTargetView(visionVBlurRTV, Color.Black);
+            context.ClearRenderTargetView(visionVNearRTV, Color.Black);
+
+            context.PixelShader.SetShaderResource(0, blurInputSRV);
+            context.PixelShader.SetShaderResource(1, nearInputSRV);
+
+            //draw
+            context.Draw(6, 0);
+        }
+
+        void drawCompositePass(RenderTargetView renderView, DepthStencilView depthView, ShaderResourceView textureSRV,
+            ShaderResourceView blurSRV, ShaderResourceView nearSRV,
+            ShaderResourceView visionParamSRV, ShaderResourceView visionCoCSRV, ShaderResourceView visionBlurSRV, ShaderResourceView visionNearSRV,
+            RenderMode renderMode)
         {
             context.VertexShader.Set(compositeVertexShader);
             context.VertexShader.SetConstantBuffer(0, positionConstantBuffer);
@@ -247,10 +349,17 @@ namespace DOFScene
             context.ClearDepthStencilView(depthView, DepthStencilClearFlags.Depth, 1.0f, 0);
             context.ClearRenderTargetView(renderView, Color.Black);
 
+            // pin-hole part
             context.PixelShader.SetConstantBuffer(1, compositeConstantBuffer);
             context.PixelShader.SetShaderResource(0, textureSRV);
             context.PixelShader.SetShaderResource(1, blurSRV);
             context.PixelShader.SetShaderResource(2, nearSRV);
+
+            // vision part
+            context.PixelShader.SetShaderResource(3, visionParamSRV);
+            context.PixelShader.SetShaderResource(4, visionBlurSRV);
+            context.PixelShader.SetShaderResource(5, visionNearSRV);
+            context.PixelShader.SetShaderResource(6, visionCoCSRV);
 
             //draw
             context.Draw(6, 0);
@@ -277,7 +386,8 @@ namespace DOFScene
             float scale = (float)(imagePlanePixelsPerMeter * camera.lensRadius / (camera.focusPlaneZ * Math.Max(12, displaySize.Width / 100.0)));
             cameraInfoConstants.clipInfo = new Vector4(
                 z_n * z_f,  z_n - z_f,  z_f, scale);
-            cameraInfoConstants.focusPlaneZ = camera.focusPlaneZ;
+            //cameraInfoConstants.focusPlaneZ = camera.focusPlaneZ;
+            cameraInfoConstants.focusPlaneZ = -focus / 1000.0f;
 
 		    float top = (float)(z_f * Math.Tan(camera.fov / 2));
 		    float right = top / camera.height * camera.width;
@@ -294,8 +404,7 @@ namespace DOFScene
             context.UnmapSubresource(blurConstantBuffer, 0);
 
             databox = context.MapSubresource(compositeConstantBuffer, 0, MapMode.WriteDiscard, SharpDX.Direct3D11.MapFlags.None, out stream);
-            //compositeConstants.renderMode = (int)renderMode;
-            compositeConstants.renderMode = (int)RenderMode.VisionParam;
+            compositeConstants.renderMode = (int)renderMode;
             if (!databox.IsEmpty)
                 stream.Write(compositeConstants);
             context.UnmapSubresource(compositeConstantBuffer, 0);
@@ -310,13 +419,23 @@ namespace DOFScene
 
             context.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(rectVertexBuffer, rectVertexSize, 0));
 
-            //drawCoCPass(cocBufferRTV, depthView, colorSRV, depthSRV);
-            //drawHorizontalBlurPass(depthView, cocBufferSRV);
-            //drawVerticalBlurPass(depthView, hBlurBufferSRV, hNearBufferSRV);
+            // pin-hole part
+            drawCoCPass(cocBufferRTV, depthView, colorSRV, depthSRV);
+            drawHorizontalBlurPass(depthView, cocBufferSRV);
+            drawVerticalBlurPass(depthView, hBlurBufferSRV, hNearBufferSRV);
             //drawCompositePass(renderView, depthView, cocBufferSRV, vBlurBufferSRV, vNearBufferSRV, renderMode);
+
+            // eye vision part
             drawVisionInputPass(visionParamBufferRTV, depthView, depthSRV);
             drawVisionHiddenLayer1Pass(visionHiddenLayer1OutputRTV, depthView, visionParamBufferSRV);
-            drawCompositePass(renderView, depthView, visionHiddenLayer1OutputSRV[0], vBlurBufferSRV, vNearBufferSRV, renderMode);
+            drawVisionHiddenLayer2Pass(visionHiddenLayer2OutputRTV, depthView, visionHiddenLayer1OutputSRV);
+            drawVisionOutputLayerPass(visionOutputLayerOutputRTV, depthView, visionHiddenLayer2OutputSRV, visionParamBufferSRV);
+            drawVisionHorizontalBlurPass(depthView, colorSRV, visionOutputLayerOutputSRV);
+            drawVisionVerticalBlurPass(depthView, visionHBlurBufferSRV, visionHNearBufferSRV);
+            //drawCompositePass(renderView, depthView, cocBufferSRV, vBlurBufferSRV, vNearBufferSRV,
+            //    visionParamBufferSRV, visionOutputLayerOutputSRV, visionVBlurBufferSRV, visionVNearBufferSRV, renderMode);
+            drawCompositePass(renderView, depthView, cocBufferSRV, vBlurBufferSRV, vNearBufferSRV,
+                  visionParamBufferSRV, visionOutputLayerOutputSRV, visionVBlurBufferSRV, visionVNearBufferSRV, renderMode);
         }
 
         private Texture2D createTextureBuffer(int splitW, int splitH)
@@ -371,6 +490,15 @@ namespace DOFScene
             var visionHiddenLayer1PixelShaderByteCode = ShaderBytecode.CompileFromFile("VisionHiddenLayer1.fx", "PS", "ps_5_0");
             visionHiddenLayer1PixelShader = new PixelShader(device, visionHiddenLayer1PixelShaderByteCode);
 
+            var visionHiddenLayer2PixelShaderByteCode = ShaderBytecode.CompileFromFile("VisionHiddenLayer2.fx", "PS", "ps_5_0");
+            visionHiddenLayer2PixelShader = new PixelShader(device, visionHiddenLayer2PixelShaderByteCode);
+
+            var visionOutputLayerPixelShaderByteCode = ShaderBytecode.CompileFromFile("VisionOutputLayer.fx", "PS", "ps_5_0");
+            visionOutputLayerPixelShader = new PixelShader(device, visionOutputLayerPixelShaderByteCode);
+
+            var visionHorizontalBlurPixelShaderByteCode = ShaderBytecode.CompileFromFile("Vision_horizontal.fx", "PS", "ps_5_0");
+            visionHorizontalBlurPixelShader = new PixelShader(device, visionHorizontalBlurPixelShaderByteCode);
+
             positionConstantBuffer = new Buffer(device, Utilities.SizeOf<PositionConstants>(), ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0);
             cameraConstantBuffer = new Buffer(device, Utilities.SizeOf<CameraInfoConstants>(), ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0);
             blurConstantBuffer = new Buffer(device, Utilities.SizeOf<BlurConstants>(), ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0);
@@ -417,14 +545,38 @@ namespace DOFScene
             visionHiddenLayer1Output = new Texture2D[3];
             visionHiddenLayer1OutputRTV = new RenderTargetView[3];
             visionHiddenLayer1OutputSRV = new ShaderResourceView[3];
+            visionHiddenLayer2Output = new Texture2D[3];
+            visionHiddenLayer2OutputRTV = new RenderTargetView[3];
+            visionHiddenLayer2OutputSRV = new ShaderResourceView[3];
             for (int i = 0; i < 3; ++i)
             {
                 visionHiddenLayer1Output[i] = createTextureBuffer(1, 1);
                 visionHiddenLayer1OutputSRV[i] = new ShaderResourceView(device, visionHiddenLayer1Output[i]);
                 visionHiddenLayer1OutputRTV[i] = new RenderTargetView(device, visionHiddenLayer1Output[i]);
+                visionHiddenLayer2Output[i] = createTextureBuffer(1, 1);
+                visionHiddenLayer2OutputSRV[i] = new ShaderResourceView(device, visionHiddenLayer2Output[i]);
+                visionHiddenLayer2OutputRTV[i] = new RenderTargetView(device, visionHiddenLayer2Output[i]);
             }
 
+            visionOutputLayerOutput = createTextureBuffer(1, 1);
+            visionOutputLayerOutputSRV = new ShaderResourceView(device, visionOutputLayerOutput);
+            visionOutputLayerOutputRTV = new RenderTargetView(device, visionOutputLayerOutput);
 
+            visionHNearBuffer = createTextureBuffer(2, 1);
+            visionHNearBufferSRV = new ShaderResourceView(device, visionHNearBuffer);
+            visionHNearRTV = new RenderTargetView(device, visionHNearBuffer);
+
+            visionHBlurBuffer = createTextureBuffer(2, 1);
+            visionHBlurBufferSRV = new ShaderResourceView(device, visionHBlurBuffer);
+            visionHBlurRTV = new RenderTargetView(device, visionHBlurBuffer);
+
+            visionVNearBuffer = createTextureBuffer(2, 2);
+            visionVNearBufferSRV = new ShaderResourceView(device, visionVNearBuffer);
+            visionVNearRTV = new RenderTargetView(device, visionVNearBuffer);
+
+            visionVBlurBuffer = createTextureBuffer(2, 2);
+            visionVBlurBufferSRV = new ShaderResourceView(device, visionVBlurBuffer);
+            visionVBlurRTV = new RenderTargetView(device, visionVBlurBuffer);
 
             float ratio = (float)displaySize.Height / displaySize.Width;
             float w = (float)displaySize.Width * 0.5f, h = (float)displaySize.Height * 0.5f;

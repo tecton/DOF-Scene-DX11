@@ -24,7 +24,10 @@ namespace DOFScene
         NearBuffer,
         Pinhole,
         Blurred,
-        VisionParam
+        VisionParam,
+        VisionResult,
+        VisionXCoC,
+        VisionYCoC
     };
 
     class DisplayWindow

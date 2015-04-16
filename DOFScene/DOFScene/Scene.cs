@@ -48,6 +48,7 @@ namespace DOFScene
                 (float)-Math.Sin(3 / 180.0 * Math.PI),
                 (float)(Math.Cos(3 / 180.0 * Math.PI) * Math.Cos(52 / 180.0 * Math.PI)));
             eyePos = new Vector3(2.3f, 0.05f, -0.5f);
+            //eyePos = new Vector3(0.4f, 0.05f, -0.2f);
             var view = Matrix.LookAtLH(eyePos, eyePos + dir, Vector3.UnitY);
             //var view = Matrix.LookAtLH(new Vector3(0, 0, -2), new Vector3(0, 0, 0), Vector3.UnitY);
             var proj = Matrix.PerspectiveFovLH((float)Math.PI * 30f / 180.0f, size.Width / (float)size.Height, 0.1f, 20.0f);

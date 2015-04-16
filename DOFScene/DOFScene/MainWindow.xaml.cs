@@ -91,6 +91,24 @@ namespace DOFScene
             displayWindow.Draw(renderMode, focus, pupil);
         }
 
+        private void RadioButton_Checked_7(object sender, RoutedEventArgs e)
+        {
+            renderMode = RenderMode.VisionResult;
+            displayWindow.Draw(renderMode, focus, pupil);
+        }
+
+        private void RadioButton_Checked_8(object sender, RoutedEventArgs e)
+        {
+            renderMode = RenderMode.VisionXCoC;
+            displayWindow.Draw(renderMode, focus, pupil);
+        }
+
+        private void RadioButton_Checked_9(object sender, RoutedEventArgs e)
+        {
+            renderMode = RenderMode.VisionYCoC;
+            displayWindow.Draw(renderMode, focus, pupil);
+        }
+
 
     }
 }

@@ -35,18 +35,26 @@ float4 PS(PS_IN input) : SV_Target
 	float xndc = input.uv.x * 2.0 - 1;
 	float yndc = input.uv.y * 2.0 - 1;
 	float x = -z * (xndc * frustum.x) / frustum.z;
-	float y = -z * (yndc * frustum.y) / frustum.z;
+	float y = z * (yndc * frustum.y) / frustum.z;
 
 	// distance, milimeter
-	float r = sqrt(x * x + y * y + z * z) * 10;
+	float r = sqrt(x * x + y * y + z * z);
 	// degree, [-15, 15]
 	float theta = atan2(-y, sqrt(x * x + z * z)) / PI * 180;
 	// degree, [-25, 25]
 	float phi = atan2(x, z) / PI * 180;
 
-	eyeDataBuffer.r = r;
-	eyeDataBuffer.g = theta;
-	eyeDataBuffer.b = phi;
+	eyeDataBuffer.r = clamp(r * 1000, 0, 5000);
+	eyeDataBuffer.g = abs(theta);
+	eyeDataBuffer.b = abs(phi);
+	//eyeDataBuffer.r = abs(x);
+	//eyeDataBuffer.g = abs(y);
+	//eyeDataBuffer.b = abs(z);
+
+	if (r > -focusPlaneZ) // far
+		eyeDataBuffer.a = -1;
+	else // near
+		eyeDataBuffer.a = 1;
 
 	return eyeDataBuffer;
 }
