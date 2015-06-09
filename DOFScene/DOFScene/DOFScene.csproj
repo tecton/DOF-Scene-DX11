@@ -78,10 +78,17 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="DOFRenderer.cs" />
-    <Compile Include="PinholeRenderer.cs" />
-    <Compile Include="Scene.cs" />
-    <Compile Include="TriangleMesh.cs" />
+    <Compile Include="Scenes\CityScene.cs" />
+    <Compile Include="ConstantData\ConstantData.cs" />
+    <Compile Include="Renderers\DOFRenderer.cs" />
+    <Compile Include="Renderers\Renderer.cs" />
+    <Compile Include="Renderers\PinholeRenderer.cs" />
+    <Compile Include="Scenes\Scene.cs" />
+    <Compile Include="Shaders\ShaderResource.cs" />
+    <Compile Include="Textures\ColorTexture.cs" />
+    <Compile Include="Textures\DepthTexture.cs" />
+    <Compile Include="Textures\TextureResource.cs" />
+    <Compile Include="Scenes\TriangleMesh.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -96,9 +103,9 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Model.cs" />
+    <Compile Include="Scenes\Model.cs" />
     <Compile Include="DisplayWindow.cs" />
-    <Compile Include="ObjModelLoader.cs" />
+    <Compile Include="Scenes\ObjModelLoader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -112,6 +119,9 @@
       <DependentUpon>Settings.settings</DependentUpon>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
+    <Content Include="Shaders\COC.fx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="VisionHiddenLayer1.fx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -140,14 +150,11 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-    <Content Include="COC.fx">
+    <Content Include="Shaders\Composite.fx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Composite.fx">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Render.fx">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    <Content Include="Shaders\Render.fx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
@@ -159,6 +166,7 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\packages\SharpDX.2.6.3\build\SharpDX.targets" Condition="Exists('..\packages\SharpDX.2.6.3\build\SharpDX.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

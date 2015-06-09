@@ -15,6 +15,7 @@ cbuffer ClipInfo : register (b0)
 	float4 clipInfo;
 	float focusPlaneZ;
 	float3 frustum;
+	float4 focusPoint;
 };
 
 Texture2D depthTexture : register (t0);
@@ -44,17 +45,27 @@ float4 PS(PS_IN input) : SV_Target
 	// degree, [-25, 25]
 	float phi = atan2(x, z) / PI * 180;
 
-	eyeDataBuffer.r = clamp(r * 1000, 0, 5000);
-	eyeDataBuffer.g = abs(theta);
-	eyeDataBuffer.b = abs(phi);
+	float focusDepth = depthTexture.Sample(colorSampler, focusPoint.xy).r;
+	float focusZ = -reconstructDepth(focusDepth);
+	float focusXndc = focusPoint.x * 2.0 - 1;
+	float focusYndc = focusPoint.y * 2.0 - 1;
+	float focusX = -focusZ * (focusXndc * frustum.x) / frustum.z;
+	float focusY = focusZ * (focusYndc * frustum.y) / frustum.z;
+	float focusTheta = atan2(-focusY, sqrt(focusX * focusX + focusZ * focusZ)) / PI * 180;
+	float focusPhi = atan2(focusX, focusZ) / PI * 180;
+
+	eyeDataBuffer.r = clamp(r, 0, 5000);
+	eyeDataBuffer.g = abs(theta - focusTheta);
+	eyeDataBuffer.b = abs(phi - focusPhi);
 	//eyeDataBuffer.r = abs(x);
 	//eyeDataBuffer.g = abs(y);
 	//eyeDataBuffer.b = abs(z);
 
-	if (r > -focusPlaneZ) // far
-		eyeDataBuffer.a = -1;
+	//if (r > -focusPlaneZ) // far
+	if (r > focusZ)
+		eyeDataBuffer.a = -(focusZ / -clipInfo[2]);
 	else // near
-		eyeDataBuffer.a = 1;
+		eyeDataBuffer.a = (focusZ / -clipInfo[2]);
 
 	return eyeDataBuffer;
 }

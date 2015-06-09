@@ -1,5 +1,3 @@
-
-
 struct VS_IN
 {
 	float3 pos : POSITION;
@@ -82,7 +80,7 @@ void ComputeDirectionalLight(Material mat, DirectionalLight L,
 	float3 lightVec = -L.Direction;
 
 	// Add ambient term.
-	ambient = mat.Ambient * L.Ambient;	
+	//ambient = mat.Ambient * L.Ambient;	
 
 	// Add diffuse and specular term, provided the surface is in 
 	// the line of site of the light.
@@ -101,16 +99,80 @@ void ComputeDirectionalLight(Material mat, DirectionalLight L,
 	}
 }
 
+void ComputeAshikhminShirley(Material mat, DirectionalLight L, 
+                             float3 n, float3 v,
+					         out float4 ambient,
+						     out float4 diffuse,
+						     out float4 spec)
+{
+	// Initialize outputs.
+	ambient = float4(0.0f, 0.0f, 0.0f, 0.0f);
+	diffuse = float4(0.0f, 0.0f, 0.0f, 0.0f);
+	spec    = float4(0.0f, 0.0f, 0.0f, 0.0f);
+
+	// The light vector aims opposite the direction the light rays travel.
+	float3 l = -L.Direction;
+	float3 h = normalize(l + v);
+
+	// Define the coordinate frame
+    float3 epsilon = float3( 1.0f, 0.0f, 0.0f );
+    float3 tangent = normalize( cross( n, epsilon ) );
+    float3 bitangent = normalize( cross( n, tangent ) );
+
+	// Generate any useful aliases
+    float VdotN = dot( v, n );
+    float LdotN = dot( l, n );
+    float HdotN = dot( h, n );
+    float HdotL = dot( h, l );
+    float HdotT = dot( h, tangent );
+    float HdotB = dot( h, bitangent );
+
+	//ambient = mat.Ambient * 0.5;
+	float3 Rd = (mat.Diffuse).rgb;
+	float3 Rs = (mat.Specular).rgb;// * L.Specular).rgb;
+	float Nu = 10;
+    float Nv = 10;
+
+	// Compute the diffuse term
+    float3 Pd = (28.0f * Rd) / ( 23.0f * 3.14159f );
+    Pd *= (1.0f - Rs);
+    Pd *= (1.0f - pow(1.0f - (LdotN / 2.0f), 5.0f));
+    Pd *= (1.0f - pow(1.0f - (VdotN / 2.0f), 5.0f));
+	diffuse.xyz = Pd * L.Diffuse;// * 12;
+
+	// Compute the specular term
+    float ps_num_exp = Nu * HdotT * HdotT + Nv * HdotB * HdotB;
+    ps_num_exp /= (1.0f - HdotN * HdotN);
+ 
+    float Ps_num = sqrt( (Nu + 1) * (Nv + 1) );
+    Ps_num *= pow( HdotN, ps_num_exp );
+ 
+    float Ps_den = 8.0f * 3.14159f * HdotL;
+    Ps_den *= max( LdotN, VdotN );
+ 
+    float3 Ps = Rs * (Ps_num / Ps_den);
+    Ps *= ( Rs + (1.0f - Rs) * pow( 1.0f - HdotL, 5.0f ) );
+	spec.xyz = Ps * L.Specular;
+}
+
+float rand(float2 co){
+      return 0.5+(frac(sin(dot(co.xy ,float2(12.9898,78.233))) * 43758.5453))*0.5;
+}
+
 float4 PS(PS_IN input) : SV_Target
 {
+	//float c = rand(input.normal.xy);
+	//return float4(c, c, c, 1.0f);
+	//return float4(input.normal, 1.0f);
+	//return float4(1, 0, 0, 1);
 	[flatten]
 	if (textured > 0.5f)
-		return diffuseTexture.Sample(diffuseSampler, input.uv);
+		return diffuseTexture.Sample(diffuseSampler, input.uv) - float4(0.2f, 0.2f, 0.2f, 0);
 
 	// Interpolating normal can unnormalize it, so normalize it.
-    input.normal = normalize(input.normal); 
+    float3 N = normalize(input.normal);
 
-	float3 toEyeW = normalize(gEyePosW - input.worldPos);
+	float3 V = normalize(gEyePosW - input.worldPos);
 
 	// Start with a sum of zero. 
 	float4 ambient = float4(0.0f, 0.0f, 0.0f, 0.0f);
@@ -120,12 +182,13 @@ float4 PS(PS_IN input) : SV_Target
 	// Sum the light contribution from each light source.
 	float4 A, D, S;
 
-	ComputeDirectionalLight(gMaterial, gDirLight, input.normal, toEyeW, A, D, S);
+	//ComputeDirectionalLight(gMaterial, gDirLight, N, V, A, D, S);
+	ComputeAshikhminShirley(gMaterial, gDirLight, N, V, A, D, S);
 	ambient += A;  
 	diffuse += D;
 	spec    += S;
 	   
-	float4 litColor = ambient + diffuse + spec;
+	float4 litColor = clamp(ambient + diffuse + spec, 0.0, 1.0);
 
 	// Common to take alpha from diffuse material.
 	litColor.a = gMaterial.Diffuse.a;

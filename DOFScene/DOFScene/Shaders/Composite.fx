@@ -18,6 +18,7 @@ cbuffer cbPerObject : register (b0)
 cbuffer RenderMode : register (b1)
 {
 	int renderMode;
+	float2 focusPosition;
 };
 
 Texture2D colorTexture : register (t0);
@@ -181,6 +182,10 @@ float4 visionResult(PS_IN input)
 
 float4 PS(PS_IN input) : SV_Target
 {
+	float x = abs(input.uv.x - focusPosition.x);
+	float y = abs(input.uv.y - focusPosition.y);
+	if (x < 0.008 && y < 0.016f)
+		return float4(0.0f, 1.0f, 0, 1.0f);
 	if (renderMode < 5)
 		return pinholeResult(input);
 	else

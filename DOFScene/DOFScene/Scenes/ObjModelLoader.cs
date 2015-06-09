@@ -18,13 +18,13 @@ namespace DOFScene
 {
     class ObjModelLoader
     {
-        Device m_device;
+        Device device;
         LoadResult loadResult;
         String m_modelPath;
 
-        public ObjModelLoader(Device device)
+        public ObjModelLoader(Device _device)
         {
-            m_device = device;
+            device = _device;
         }
 
         //Load model
@@ -40,9 +40,9 @@ namespace DOFScene
             //use this directory path to load textures from
             m_modelPath = Path.GetDirectoryName(fileName);
 
-            Model model = new Model();
+            Model model = new Model(device);
 
-            AddVertexData(model, loadResult, m_device);
+            AddVertexData(model, loadResult);
 
             return model;
         }
@@ -60,7 +60,7 @@ namespace DOFScene
         }
 
         //Create meshes and add vertex and index buffers
-        private void AddVertexData(Model model, LoadResult loadResult, Device device)
+        private void AddVertexData(Model model, LoadResult loadResult)
         {
             foreach (Group group in loadResult.Groups)
             {
@@ -88,7 +88,6 @@ namespace DOFScene
 
                     for (int i = 0; i < face.Count; i++)
                     {
-                        // Right-hand transform to Left-hand coordinate
                         FaceVertex faceVertex = face[i];
                         //add position
                         {

@@ -19,6 +19,8 @@ cbuffer ClipInfo : register (b1)
 {
 	float4 clipInfo;
 	float focusPlaneZ;
+	float3 frustum;
+	float4 focusPoint;
 };
 
 Texture2D depthTexture : register (t0);
@@ -50,7 +52,10 @@ float4 PS(PS_IN input) : SV_Target
     
 	float scale = clipInfo.a;
     // Note that the radius is negative in the far field.
-    radius = (z - focusPlaneZ) * scale;
+	float focusDepth = depthTexture.Sample(colorSampler, focusPoint.xy).r;
+	float focusZ = reconstructDepth(focusDepth);
+	radius = (z - focusZ) * scale;
+    //radius = (z - focusPlaneZ) * scale;
 
 	float4 result;
 

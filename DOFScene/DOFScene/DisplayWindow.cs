@@ -1,18 +1,12 @@
-﻿using SharpDX;
-using SharpDX.D3DCompiler;
+﻿using DOFScene.Renderers;
+using SharpDX;
 using SharpDX.Direct3D;
 using SharpDX.Direct3D11;
 using SharpDX.DXGI;
 using SharpDX.Windows;
-using System;
-using System.Collections.Generic;
-using System.Threading;
 using System.Windows;
 using System.Windows.Forms;
-using System.Windows.Media.Media3D;
-using Buffer = SharpDX.Direct3D11.Buffer;
 using Device = SharpDX.Direct3D11.Device;
-using MapFlags = SharpDX.Direct3D11.MapFlags;
 
 
 namespace DOFScene
@@ -33,9 +27,11 @@ namespace DOFScene
     class DisplayWindow
     {
         #region Display Form
+        const int WIDTH = 1000;
+        const int HEIGHT = 424;
         Form form = new Form();
         RenderControl dx11Control = new RenderControl();
-        System.Drawing.Size displaySize = new System.Drawing.Size(1000, 424);
+        System.Drawing.Size displaySize = new System.Drawing.Size(WIDTH, HEIGHT);
         #endregion
 
         #region DirectX Related
@@ -46,17 +42,22 @@ namespace DOFScene
         DeviceContext context;
 
         Texture2D backBuffer;
-        RenderTargetView renderView;
+        RenderTargetView renderTargetView;
         Texture2D depthBuffer;
-        DepthStencilView depthView;
+        DepthStencilView depthStencilView;
 
         SamplerState sampler;
-
-        InputLayout layout;
         #endregion
 
         #region Virtual Scene
         Scene scene;
+        // focus at center of screen by default
+        public System.Windows.Point focusPoint = new System.Windows.Point(WIDTH / 2.0, HEIGHT / 2.0);
+        bool saveScreenshots = false;
+        RenderMode renderMode;
+        float focus;
+        float pupil;
+        float scale;
         #endregion
 
         #region Renderers
@@ -65,25 +66,46 @@ namespace DOFScene
         #endregion
 
         #region Initializer
+
         public DisplayWindow()
         {
             init();
         }
+
         #endregion
 
         #region Interfaces
-        public void Draw(RenderMode renderMode, float focus, float pupil)
+
+        public Form getForm()
         {
-            pinholeRenderer.Draw(scene, renderView);
-            Texture2D.ToFile(context, pinholeRenderer.outputBuffer, ImageFileFormat.Bmp, "color.bmp");
-            dofRenderer.Draw(renderView, depthView, pinholeRenderer.outputBuffer, pinholeRenderer.depthSRV, scene.camera, focus, pupil, renderMode);
-            swapChain.Present(0, PresentFlags.None);
+            return form;
+        }
+
+        public void setScreenshots(bool toSave)
+        {
+            this.saveScreenshots = toSave;
+            dofRenderer.setScreenshots(toSave);
+        }
+
+        public void setFocusPoint(int x, int y)
+        {
+            this.focusPoint.X = x;
+            this.focusPoint.Y = y;
+        }
+
+        public void Draw(RenderMode renderMode, float focus, float pupil, float scale)
+        {
+            scene.scale = scale;
+            this.renderMode = renderMode;
+            this.focus = focus;
+            this.pupil = pupil;
+            this.scale = scale;
+            draw();
         }
 
         public void showWindow()
         {
             form.Show();
-            //Draw(RenderMode.Result);
         }
 
         public void hideWindow()
@@ -99,10 +121,9 @@ namespace DOFScene
         public void Dispose()
         {
             // Release all resources
-            layout.Dispose();
-            depthView.Dispose();
+            depthStencilView.Dispose();
             depthBuffer.Dispose();
-            renderView.Dispose();
+            renderTargetView.Dispose();
             backBuffer.Dispose();
             context.ClearState();
             context.Flush();
@@ -110,19 +131,21 @@ namespace DOFScene
             context.Dispose();
             swapChain.Dispose();
         }
+
         #endregion
 
         #region private methods
+
         private void init()
         {
             // set window size
             dx11Control.Size = displaySize;
             System.Drawing.Size formSize = displaySize;
-            formSize.Height += 40;
-            formSize.Width += 40;
+            formSize.Height += (int)(SystemParameters.WindowCaptionHeight + 2 * (SystemParameters.ResizeFrameHorizontalBorderHeight + SystemParameters.FixedFrameHorizontalBorderHeight));
+            formSize.Width += (int)(SystemParameters.ResizeFrameVerticalBorderWidth + SystemParameters.FixedFrameVerticalBorderWidth) * 2;
             form.Size = formSize;
-            form.Left = 0;
             form.Controls.Add(dx11Control);
+            this.dx11Control.MouseClick += new MouseEventHandler(handleMouseEvent);
 
             if (initialized)
                 Dispose();
@@ -147,7 +170,7 @@ namespace DOFScene
 
             // New RenderTargetView from the backbuffer
             backBuffer = Texture2D.FromSwapChain<Texture2D>(swapChain, 0);
-            renderView = new RenderTargetView(device, backBuffer);
+            renderTargetView = new RenderTargetView(device, backBuffer);
 
             // Create Depth Buffer & View
             depthBuffer = new Texture2D(device, new Texture2DDescription()
@@ -163,7 +186,7 @@ namespace DOFScene
                 CpuAccessFlags = CpuAccessFlags.None,
                 OptionFlags = ResourceOptionFlags.None
             });
-            depthView = new DepthStencilView(device, depthBuffer);
+            depthStencilView = new DepthStencilView(device, depthBuffer);
 
             sampler = new SamplerState(device, new SamplerStateDescription()
             {
@@ -179,7 +202,7 @@ namespace DOFScene
                 MaximumLod = 16,
             });
 
-            // global shader setting
+            // global shader setting (only need to setup one here)
             context.PixelShader.SetSampler(0, sampler);
             context.InputAssembler.PrimitiveTopology = PrimitiveTopology.TriangleList;
 
@@ -190,6 +213,30 @@ namespace DOFScene
             pinholeRenderer.Init(device, context, displaySize);
             dofRenderer.Init(device, context, displaySize);
         }
+
+        private void draw()
+        {
+            pinholeRenderer.Draw(scene);
+            //string filename = focus + "-" + scale * 0.7524f + ".png";
+            string filename = "frames/" + this.renderMode + "-P-" + pupil + "-R-" + scale * 0.7524f + "-F-" + focusPoint.X + "-" + focusPoint.Y + ".png";
+            dofRenderer.Draw(renderTargetView, depthStencilView, pinholeRenderer.outputTexture.texture, pinholeRenderer.depthTexture.srv,
+                scene.camera, focus, pupil, renderMode, focusPoint);
+            if (saveScreenshots)
+                Texture2D.ToFile(context, dofRenderer.outputBuffer, ImageFileFormat.Png, filename);
+            swapChain.Present(0, PresentFlags.None);
+        }
+
+        private void handleMouseEvent(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                // update focus point
+                this.focusPoint.X = e.Location.X;
+                this.focusPoint.Y = e.Location.Y;
+                draw();
+            }
+        }
+
         #endregion
     }
 }

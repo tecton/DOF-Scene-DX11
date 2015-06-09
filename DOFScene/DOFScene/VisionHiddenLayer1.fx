@@ -6,7 +6,7 @@ struct PS_IN
 
 cbuffer ParamInfo : register (b0)
 {
-	float focus;
+	float cameraFarZ;
 	float pupil;
 };
 
@@ -60,6 +60,8 @@ PixelOutputType PS(PS_IN input) : SV_Target
 	float4 lineData = paramTexture.Sample(textureSampler, input.uv);
 
 	PixelOutputType result;
+
+	float focus = abs(lineData.a * cameraFarZ);
 
 	// matrix multiply and save result to different textures
 	for (int i = 0; i < 4; i++)

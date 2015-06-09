@@ -4,22 +4,28 @@
         Title="MainWindow" Height="350" Width="525">
     <Grid>
         <RadioButton Content="Signed COC" HorizontalAlignment="Left" Margin="49,89,0,0" VerticalAlignment="Top" Checked="RadioButton_Checked_1"/>
-        <RadioButton Content="Final Result" HorizontalAlignment="Left" Margin="49,56,0,0" VerticalAlignment="Top" Checked="RadioButton_Checked_2" IsChecked="True"/>
+        <RadioButton Content="Final Result" HorizontalAlignment="Left" Margin="49,56,0,0" VerticalAlignment="Top" Checked="RadioButton_Checked_2"/>
         <RadioButton Content="Near Buffer" HorizontalAlignment="Left" Margin="49,121,0,0" VerticalAlignment="Top" Checked="RadioButton_Checked_3"/>
         <RadioButton Content="Pinhole" HorizontalAlignment="Left" Margin="49,154,0,0" VerticalAlignment="Top" Checked="RadioButton_Checked_4"/>
         <RadioButton Content="Blurred" HorizontalAlignment="Left" Margin="49,186,0,0" VerticalAlignment="Top" Checked="RadioButton_Checked_5"/>
         <RadioButton Content="Input parameter" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="206,89,0,0" Checked="RadioButton_Checked_6"/>
-        <Slider HorizontalAlignment="Left" Margin="333,223,0,0" VerticalAlignment="Top" Width="167" Maximum="5000" Minimum="120" SmallChange="1" Value="720" ValueChanged="Slider_ValueChanged_1"/>
-        <Label Content="Focus:" HorizontalAlignment="Left" Margin="206,219,0,0" VerticalAlignment="Top"/>
-        <Label Content="Pupil:" HorizontalAlignment="Left" Margin="206,274,0,0" VerticalAlignment="Top"/>
-        <Slider HorizontalAlignment="Left" VerticalAlignment="Top" Margin="333,277,0,0" Width="167" Maximum="8" Minimum="2" Value="4" SmallChange="1" ValueChanged="Slider_ValueChanged_2"/>
-        <TextBox HorizontalAlignment="Left" Height="23" Margin="269,221,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="42"/>
-        <TextBox HorizontalAlignment="Left" Height="23" Margin="269,276,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="42"/>
+        <Slider HorizontalAlignment="Left" Margin="328,195,0,0" VerticalAlignment="Top" Width="167" Maximum="5000" Minimum="120" SmallChange="10" Value="200" ValueChanged="Slider_ValueChanged_1"/>
+        <Label Content="Focus:" HorizontalAlignment="Left" Margin="201,191,0,0" VerticalAlignment="Top"/>
+        <Label Content="Pupil:" HorizontalAlignment="Left" Margin="201,233,0,0" VerticalAlignment="Top"/>
+        <Slider HorizontalAlignment="Left" VerticalAlignment="Top" Margin="328,236,0,0" Width="167" Maximum="8" Minimum="2" Value="4" SmallChange="1" ValueChanged="Slider_ValueChanged_2"/>
+        <TextBox x:Name="focusValue" HorizontalAlignment="Left" Height="23" Margin="264,193,0,0" TextWrapping="Wrap" Text="200" VerticalAlignment="Top" Width="42" TextChanged="focusValue_TextChanged"/>
+        <TextBox x:Name="pupilValue" HorizontalAlignment="Left" Height="23" Margin="264,235,0,0" TextWrapping="Wrap" Text="4" VerticalAlignment="Top" Width="42" TextChanged="pupilValue_TextChanged"/>
         <RadioButton Content="x coc" HorizontalAlignment="Left" Margin="206,122,0,0" VerticalAlignment="Top" Checked="RadioButton_Checked_8"/>
         <RadioButton Content="y coc" HorizontalAlignment="Left" Margin="206,154,0,0" VerticalAlignment="Top" Checked="RadioButton_Checked_9"/>
         <Label Content="Pin-hole" HorizontalAlignment="Left" Margin="49,25,0,0" VerticalAlignment="Top"/>
         <Label Content="Eye Vision" HorizontalAlignment="Left" Margin="206,25,0,0" VerticalAlignment="Top"/>
-        <RadioButton Content="Result" HorizontalAlignment="Left" Margin="206,56,0,0" VerticalAlignment="Top" Checked="RadioButton_Checked_7"/>
+        <RadioButton Content="Result" HorizontalAlignment="Left" Margin="206,56,0,0" VerticalAlignment="Top" Checked="RadioButton_Checked_7" IsChecked="True"/>
+        <Label Content="Distance" HorizontalAlignment="Left" Margin="201,274,0,0" VerticalAlignment="Top"/>
+        <Slider HorizontalAlignment="Left" VerticalAlignment="Top" Margin="328,277,0,0" Width="167" Maximum="5000" Minimum="50" Value="200" SmallChange="20" ValueChanged="Slider_ValueChanged_4"/>
+        <TextBox x:Name="distanceValue" HorizontalAlignment="Left" Height="23" Margin="264,276,0,0" TextWrapping="Wrap" Text="200" VerticalAlignment="Top" Width="42" TextChanged="distanceValue_TextChanged"/>
+        <Label x:Name="focusPosition" Content="Label" HorizontalAlignment="Left" Margin="49,271,0,0" VerticalAlignment="Top" Height="28" Width="129"/>
+        <Button Content="show focus position
+                " HorizontalAlignment="Left" Margin="49,244,0,0" VerticalAlignment="Top" Width="129" Click="Button_Click_1"/>
 
     </Grid>
 </Window>
