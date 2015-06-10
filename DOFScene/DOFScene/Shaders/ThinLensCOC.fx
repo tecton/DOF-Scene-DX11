@@ -47,6 +47,8 @@ float4 PS(PS_IN input) : SV_Target
 	float z = reconstructDepth(depth);
 	float3 color = colorTexture.Sample(colorSampler, input.uv).rgb;
 
+	//return float4(color, 1.0f);
+
 	// Fractional radius on [0, 1]
     float radius;
     

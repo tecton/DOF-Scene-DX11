@@ -74,7 +74,7 @@ namespace DOFScene
             models.Add(modelLoader.Load("ground.obj"));
         }
 
-        public void UpdateFrameConstants(DeviceContext context, PinholeLightingConstant lightingConstant)
+        public void UpdateFrameConstants(DeviceContext context, ConstantData<LightingDataInfo> lightingConstant)
         {
             var dir = new Vector3((float)(-Math.Cos(downAngle / 180.0 * Math.PI) * Math.Sin(rightAngle / 180.0 * Math.PI)),
                 (float)-Math.Sin(downAngle / 180.0 * Math.PI),

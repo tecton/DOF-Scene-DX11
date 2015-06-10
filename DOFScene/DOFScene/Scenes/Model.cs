@@ -20,7 +20,7 @@ namespace DOFScene
         List<TriangleMesh> m_meshes;
 
         //allocate data structs for per object constant buffers
-        public PinholeObjectConstant objectConstant;
+        public ConstantData<ObjectDataInfo> objectConstant;
 
         Device device;
 
@@ -28,7 +28,7 @@ namespace DOFScene
         {
             m_meshes = new List<TriangleMesh>();
             device = _device;
-            objectConstant = new PinholeObjectConstant(device);
+            objectConstant = new ConstantData<ObjectDataInfo>(device);
         }
 
         public void AddMesh(ref TriangleMesh mesh)

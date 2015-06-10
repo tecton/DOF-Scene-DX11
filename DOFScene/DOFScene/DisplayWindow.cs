@@ -62,7 +62,9 @@ namespace DOFScene
 
         #region Renderers
         PinholeRenderer pinholeRenderer = new PinholeRenderer();
-        DOFRenderer dofRenderer = new DOFRenderer();
+        VisionRenderer dofRenderer = new VisionRenderer();
+        //ThinLensRenderer dofRenderer = new ThinLensRenderer();
+        //DOFRenderer dofRenderer = new DOFRenderer();
         #endregion
 
         #region Initializer
@@ -84,7 +86,7 @@ namespace DOFScene
         public void setScreenshots(bool toSave)
         {
             this.saveScreenshots = toSave;
-            dofRenderer.setScreenshots(toSave);
+            //dofRenderer.setScreenshots(toSave);
         }
 
         public void setFocusPoint(int x, int y)
@@ -219,10 +221,11 @@ namespace DOFScene
             pinholeRenderer.Draw(scene);
             //string filename = focus + "-" + scale * 0.7524f + ".png";
             string filename = "frames/" + this.renderMode + "-P-" + pupil + "-R-" + scale * 0.7524f + "-F-" + focusPoint.X + "-" + focusPoint.Y + ".png";
-            dofRenderer.Draw(renderTargetView, depthStencilView, pinholeRenderer.outputTexture.texture, pinholeRenderer.depthTexture.srv,
-                scene.camera, focus, pupil, renderMode, focusPoint);
-            if (saveScreenshots)
-                Texture2D.ToFile(context, dofRenderer.outputBuffer, ImageFileFormat.Png, filename);
+            //dofRenderer.Draw(renderTargetView, depthStencilView, pinholeRenderer.outputTexture.texture, pinholeRenderer.depthTexture.srv,
+            //    scene.camera, focus, pupil, renderMode, focusPoint);
+            dofRenderer.Draw(renderTargetView, pinholeRenderer.outputTexture, pinholeRenderer.depthTexture, scene.camera, focus, pupil, renderMode, focusPoint);
+            //if (saveScreenshots)
+            //    Texture2D.ToFile(context, dofRenderer.outputBuffer, ImageFileFormat.Png, filename);
             swapChain.Present(0, PresentFlags.None);
         }
 

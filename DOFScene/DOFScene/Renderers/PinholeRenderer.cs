@@ -20,7 +20,7 @@ namespace DOFScene.Renderers
 
         InputLayout layout;
 
-        PinholeLightingConstant lightingConstant;
+        ConstantData<LightingDataInfo> lightingConstant;
 
         public void Draw(Scene scene)
         {
@@ -50,7 +50,7 @@ namespace DOFScene.Renderers
             vertexShader = new VertexShaderResource(device, "Render.fx");
             pixelShader = new PixelShaderResource(device, "Render.fx");
 
-            lightingConstant = new PinholeLightingConstant(device);
+            lightingConstant = new ConstantData<LightingDataInfo>(device);
 
             // Create color and depth texture
             outputTexture = new ColorTexture(device, size);

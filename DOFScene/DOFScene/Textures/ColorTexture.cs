@@ -23,6 +23,7 @@ namespace DOFScene.Textures
                 OptionFlags = ResourceOptionFlags.None
             });
             rtv = new RenderTargetView(device, texture);
+            srv = new ShaderResourceView(device, texture);
         }
     }
 }

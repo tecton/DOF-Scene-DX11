@@ -78,6 +78,8 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Renderers\ThinLensRenderer.cs" />
+    <Compile Include="Renderers\VisionRenderer.cs" />
     <Compile Include="Scenes\CityScene.cs" />
     <Compile Include="ConstantData\ConstantData.cs" />
     <Compile Include="Renderers\DOFRenderer.cs" />
@@ -119,31 +121,31 @@
       <DependentUpon>Settings.settings</DependentUpon>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
-    <Content Include="Shaders\COC.fx">
+    <Content Include="Shaders\ThinLensCOC.fx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="VisionHiddenLayer1.fx">
+    <Content Include="Shaders\VisionHiddenLayer1.fx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="VisionHiddenLayer2.fx">
+    <Content Include="Shaders\VisionHiddenLayer2.fx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="VisionInput.fx">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="VisionOutputLayer.fx">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Vision_horizontal.fx">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="VVDoF_blur.fx">
+    <Content Include="Shaders\VisionInput.fx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="VVDoF_horizontal.fx">
+    <Content Include="Shaders\VisionOutputLayer.fx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Shaders\Vision_horizontal.fx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Shaders\VVDoF_blur.fx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="VVDoF_vertical.fx">
+    <Content Include="Shaders\VVDoF_horizontal.fx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Shaders\VVDoF_vertical.fx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <EmbeddedResource Include="Properties\Resources.resx">

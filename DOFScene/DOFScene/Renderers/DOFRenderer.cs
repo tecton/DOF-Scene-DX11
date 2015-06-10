@@ -1,4 +1,5 @@
-﻿using SharpDX;
+﻿using DOFScene.ConstantData;
+using SharpDX;
 using SharpDX.D3DCompiler;
 using SharpDX.Direct3D11;
 using SharpDX.DXGI;
@@ -8,50 +9,6 @@ using Device = SharpDX.Direct3D11.Device;
 
 namespace DOFScene.Renderers
 {
-    #region shader constant structures
-
-    public struct PositionConstants
-    {
-        public Matrix worldViewProj;
-    };
-
-    // used in pinhole camera coc
-    public struct CameraInfoConstants
-    {
-        public Vector4 clipInfo;
-        public float focusPlaneZ;
-        public Vector3 frustum;
-        public Vector4 focusPoint;
-    };
-
-    // used in pinhole camera blur
-    public struct BlurConstants
-    {
-        public Vector2 textureSize;
-        public Vector2 invTextureSize;
-        public float maxCoCRadiusPixels;
-        public float nearBlurRadiusPixels;
-        public float invNearBlurRadiusPixels;
-        public float padding;
-    };
-
-    // used in composite shader
-    public struct CompositeConstants
-    {
-        public int renderMode;
-        public Vector3 focusPosition;
-    };
-
-    // used in vision hidden layer1
-    public struct EyeParamConstants
-    {
-        public float cameraFarZ;
-        public float pupil;
-        public Vector2 padding;
-    };
-
-    #endregion
-
     class DOFRenderer
     {
         Device device;
@@ -148,15 +105,15 @@ namespace DOFScene.Renderers
         #region Shader Constants
 
         Buffer positionConstantBuffer;
-        PositionConstants dofConstants = new PositionConstants();
+        SpritePositionInfo dofConstants = new SpritePositionInfo();
         Buffer cameraConstantBuffer;
-        CameraInfoConstants cameraInfoConstants = new CameraInfoConstants();
+        CameraInfo cameraInfoConstants = new CameraInfo();
         Buffer blurConstantBuffer;
-        BlurConstants blurConstants = new BlurConstants();
+        BlurParamInfo blurConstants = new BlurParamInfo();
         Buffer compositeConstantBuffer;
-        CompositeConstants compositeConstants = new CompositeConstants();
+        CompositeInfo compositeConstants = new CompositeInfo();
         Buffer eyeParamConstantBuffer;
-        EyeParamConstants eyeParamConstants = new EyeParamConstants();
+        EyeParamInfo eyeParamConstants = new EyeParamInfo();
 
         #endregion
 
@@ -228,15 +185,20 @@ namespace DOFScene.Renderers
 
             // pin-hole part
             drawCoCPass(cocBufferRTV, depthView, colorSRV, depthSRV);
+            //Texture2D.ToFile(context, cocBuffer, ImageFileFormat.Png, "aa.png");
             drawHorizontalBlurPass(depthView, cocBufferSRV);
             drawVerticalBlurPass(depthView, hBlurBufferSRV, hNearBufferSRV);
             //drawCompositePass(renderView, depthView, cocBufferSRV, vBlurBufferSRV, vNearBufferSRV, renderMode);
 
             // eye vision part
             drawVisionInputPass(visionParamBufferRTV, depthView, depthSRV);
+            Texture2D.ToFile(context, visionParamBuffer, ImageFileFormat.Png, "a.png");
             drawVisionHiddenLayer1Pass(visionHiddenLayer1OutputRTV, depthView, visionParamBufferSRV);
             drawVisionHiddenLayer2Pass(visionHiddenLayer2OutputRTV, depthView, visionHiddenLayer1OutputSRV);
             drawVisionOutputLayerPass(visionOutputLayerOutputRTV, depthView, visionHiddenLayer2OutputSRV, visionParamBufferSRV);
+            Texture2D.ToFile(context, visionOutputLayerOutput, ImageFileFormat.Png, "b.png");
+            Texture2D.ToFile(context, visionHNearBuffer, ImageFileFormat.Png, "c.png");
+            Texture2D.ToFile(context, visionVNearBuffer, ImageFileFormat.Png, "d.png");
             drawVisionHorizontalBlurPass(depthView, colorSRV, visionOutputLayerOutputSRV);
             drawVisionVerticalBlurPass(depthView, visionHBlurBufferSRV, visionHNearBufferSRV);
             drawCompositePass(renderView, depthView, cocBufferSRV, vBlurBufferSRV, vNearBufferSRV,
@@ -252,9 +214,9 @@ namespace DOFScene.Renderers
             this.displaySize = size;
 
             // Compile Vertex and Pixel shaders
-            var cocVertexShaderByteCode = ShaderBytecode.CompileFromFile("shaders/COC.fx", "VS", "vs_5_0");
+            var cocVertexShaderByteCode = ShaderBytecode.CompileFromFile("shaders/ThinLensCOC.fx", "VS", "vs_5_0");
             cocVertexShader = new VertexShader(device, cocVertexShaderByteCode);
-            var cocPixelShaderByteCode = ShaderBytecode.CompileFromFile("shaders/COC.fx", "PS", "ps_5_0");
+            var cocPixelShaderByteCode = ShaderBytecode.CompileFromFile("shaders/ThinLensCOC.fx", "PS", "ps_5_0");
             cocPixelShader = new PixelShader(device, cocPixelShaderByteCode);
 
             var compositeVertexShaderByteCode = ShaderBytecode.CompileFromFile("shaders/Composite.fx", "VS", "vs_5_0");
@@ -287,11 +249,11 @@ namespace DOFScene.Renderers
             var visionHorizontalBlurPixelShaderByteCode = ShaderBytecode.CompileFromFile("Vision_horizontal.fx", "PS", "ps_5_0");
             visionHorizontalBlurPixelShader = new PixelShader(device, visionHorizontalBlurPixelShaderByteCode);
 
-            positionConstantBuffer = new Buffer(device, Utilities.SizeOf<PositionConstants>(), ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0);
-            cameraConstantBuffer = new Buffer(device, Utilities.SizeOf<CameraInfoConstants>(), ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0);
-            blurConstantBuffer = new Buffer(device, Utilities.SizeOf<BlurConstants>(), ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0);
-            compositeConstantBuffer = new Buffer(device, Utilities.SizeOf<CompositeConstants>(), ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0);
-            eyeParamConstantBuffer = new Buffer(device, Utilities.SizeOf<EyeParamConstants>(), ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0);
+            positionConstantBuffer = new Buffer(device, Utilities.SizeOf<SpritePositionInfo>(), ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0);
+            cameraConstantBuffer = new Buffer(device, Utilities.SizeOf<CameraInfo>(), ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0);
+            blurConstantBuffer = new Buffer(device, Utilities.SizeOf<BlurParamInfo>(), ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0);
+            compositeConstantBuffer = new Buffer(device, Utilities.SizeOf<CompositeInfo>(), ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0);
+            eyeParamConstantBuffer = new Buffer(device, Utilities.SizeOf<EyeParamInfo>(), ResourceUsage.Dynamic, BindFlags.ConstantBuffer, CpuAccessFlags.Write, ResourceOptionFlags.None, 0);
 
             blurConstants.nearBlurRadiusPixels = 12.0f;
             blurConstants.maxCoCRadiusPixels = 12.0f;
