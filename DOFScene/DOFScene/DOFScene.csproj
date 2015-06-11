@@ -78,11 +78,13 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Renderers\DOFRenderer.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Renderers\ThinLensRenderer.cs" />
     <Compile Include="Renderers\VisionRenderer.cs" />
     <Compile Include="Scenes\CityScene.cs" />
     <Compile Include="ConstantData\ConstantData.cs" />
-    <Compile Include="Renderers\DOFRenderer.cs" />
     <Compile Include="Renderers\Renderer.cs" />
     <Compile Include="Renderers\PinholeRenderer.cs" />
     <Compile Include="Scenes\Scene.cs" />
