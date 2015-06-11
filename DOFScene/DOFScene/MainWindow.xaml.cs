@@ -49,7 +49,7 @@ namespace DOFScene
         const int FOCUS_NUM = 6;
         int[] focus_x = new int[FOCUS_NUM] { 106, 186, 307, 505, 716, 766 };
         int[] focus_y = new int[FOCUS_NUM] { 169, 153, 132, 111, 90, 285 };
-        RenderMode[] renderModes = new RenderMode[] { RenderMode.Result, RenderMode.SignedCOC, RenderMode.VisionResult, RenderMode.VisionXCoC };
+        RenderMode[] renderModes = new RenderMode[] { RenderMode.ThinLensResult, RenderMode.ThinLensSignedCOC, RenderMode.VisionResult, RenderMode.VisionXCoC };
 
         public MainWindow()
         {
@@ -128,19 +128,19 @@ namespace DOFScene
 
         private void RadioButton_Checked_1(object sender, RoutedEventArgs e)
         {
-            renderMode = RenderMode.SignedCOC;
+            renderMode = RenderMode.ThinLensSignedCOC;
             redraw();
         }
 
         private void RadioButton_Checked_2(object sender, RoutedEventArgs e)
         {
-            renderMode = RenderMode.Result;
+            renderMode = RenderMode.ThinLensResult;
             redraw();
         }
 
         private void RadioButton_Checked_3(object sender, RoutedEventArgs e)
         {
-            renderMode = RenderMode.NearBuffer;
+            renderMode = RenderMode.ThinLensNearBuffer;
             redraw();
         }
 
@@ -152,7 +152,7 @@ namespace DOFScene
 
         private void RadioButton_Checked_5(object sender, RoutedEventArgs e)
         {
-            renderMode = RenderMode.Blurred;
+            renderMode = RenderMode.ThinLensBlurred;
             redraw();
         }
 
@@ -224,7 +224,7 @@ namespace DOFScene
 
         private void Button_Click_1(object sender, RoutedEventArgs e)
         {
-            focusPosition.Content = "X: " + displayWindow.focusPoint.X + " Y: " + displayWindow.focusPoint.Y;
+            focusPosition.Content = "X: " + displayWindow.scene.camera.focusPoint.X + " Y: " + displayWindow.scene.camera.focusPoint.Y;
         }
     }
 }

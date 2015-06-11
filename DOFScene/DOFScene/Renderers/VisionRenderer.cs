@@ -66,10 +66,10 @@ namespace DOFScene.Renderers
         }
 
         protected override void draw(RenderTargetView renderView, ColorTexture sceneColorTexture, DepthTexture sceneDepthTexture,
-            Camera camera, float focus, float pupil, RenderMode renderMode, System.Windows.Point focusPoint)
+            Camera camera, RenderMode renderMode)
         {
             eyeParam.data.cameraFarZ = camera.farPlaneZ;
-            eyeParam.data.pupil = pupil;
+            eyeParam.data.pupil = camera.pupil;
             eyeParam.Update(context);
 
             drawVisionInputPass(sceneDepthTexture);
@@ -161,7 +161,6 @@ namespace DOFScene.Renderers
             context.ClearRenderTargetView(hBlurBuffer.rtv, Color.Black);
             context.ClearRenderTargetView(hNearBuffer.rtv, Color.Black);
 
-            Texture2D.ToFile(context, sceneColorTexture.texture, ImageFileFormat.Png, "b1.png");
             context.PixelShader.SetShaderResource(0, sceneColorTexture.srv);
             context.PixelShader.SetShaderResource(1, visionOutputLayerOutput.srv);
 

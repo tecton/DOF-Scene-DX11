@@ -13,11 +13,11 @@ namespace DOFScene
 {
     enum RenderMode
     {
-        Result,
-        SignedCOC,
-        NearBuffer,
+        ThinLensResult,
+        ThinLensSignedCOC,
+        ThinLensNearBuffer,
         Pinhole,
-        Blurred,
+        ThinLensBlurred,
         VisionParam,
         VisionResult,
         VisionXCoC,
@@ -43,28 +43,21 @@ namespace DOFScene
 
         Texture2D backBuffer;
         RenderTargetView renderTargetView;
-        Texture2D depthBuffer;
-        DepthStencilView depthStencilView;
 
         SamplerState sampler;
         #endregion
 
         #region Virtual Scene
-        Scene scene;
-        // focus at center of screen by default
-        public System.Windows.Point focusPoint = new System.Windows.Point(WIDTH / 2.0, HEIGHT / 2.0);
+        public Scene scene;
+        //public System.Windows.Point focusPoint = new System.Windows.Point(WIDTH / 2.0, HEIGHT / 2.0);
         bool saveScreenshots = false;
         RenderMode renderMode;
-        float focus;
-        float pupil;
-        float scale;
         #endregion
 
         #region Renderers
         PinholeRenderer pinholeRenderer = new PinholeRenderer();
-        VisionRenderer dofRenderer = new VisionRenderer();
-        //ThinLensRenderer dofRenderer = new ThinLensRenderer();
-        //DOFRenderer dofRenderer = new DOFRenderer();
+        DofRenderer visionRenderer = new VisionRenderer();
+        DofRenderer thinLensRenderer = new ThinLensRenderer();
         #endregion
 
         #region Initializer
@@ -78,10 +71,10 @@ namespace DOFScene
 
         #region Interfaces
 
-        public Form getForm()
-        {
-            return form;
-        }
+        //public Form getForm()
+        //{
+        //    return form;
+        //}
 
         public void setScreenshots(bool toSave)
         {
@@ -91,17 +84,16 @@ namespace DOFScene
 
         public void setFocusPoint(int x, int y)
         {
-            this.focusPoint.X = x;
-            this.focusPoint.Y = y;
+            scene.camera.focusPoint.X = x;
+            scene.camera.focusPoint.Y = y;
         }
 
         public void Draw(RenderMode renderMode, float focus, float pupil, float scale)
         {
             scene.scale = scale;
+            scene.camera.focusPlaneZ = focus;
+            scene.camera.pupil = pupil;
             this.renderMode = renderMode;
-            this.focus = focus;
-            this.pupil = pupil;
-            this.scale = scale;
             draw();
         }
 
@@ -123,8 +115,6 @@ namespace DOFScene
         public void Dispose()
         {
             // Release all resources
-            depthStencilView.Dispose();
-            depthBuffer.Dispose();
             renderTargetView.Dispose();
             backBuffer.Dispose();
             context.ClearState();
@@ -174,22 +164,6 @@ namespace DOFScene
             backBuffer = Texture2D.FromSwapChain<Texture2D>(swapChain, 0);
             renderTargetView = new RenderTargetView(device, backBuffer);
 
-            // Create Depth Buffer & View
-            depthBuffer = new Texture2D(device, new Texture2DDescription()
-            {
-                Format = Format.D32_Float_S8X24_UInt,
-                ArraySize = 1,
-                MipLevels = 1,
-                Width = displaySize.Width,
-                Height = displaySize.Height,
-                SampleDescription = new SampleDescription(1, 0),
-                Usage = ResourceUsage.Default,
-                BindFlags = BindFlags.DepthStencil,
-                CpuAccessFlags = CpuAccessFlags.None,
-                OptionFlags = ResourceOptionFlags.None
-            });
-            depthStencilView = new DepthStencilView(device, depthBuffer);
-
             sampler = new SamplerState(device, new SamplerStateDescription()
             {
                 Filter = Filter.MinMagMipLinear,
@@ -213,17 +187,19 @@ namespace DOFScene
 
             // Init two renderers
             pinholeRenderer.Init(device, context, displaySize);
-            dofRenderer.Init(device, context, displaySize);
+            visionRenderer.Init(device, context, displaySize);
+            thinLensRenderer.Init(device, context, displaySize);
         }
 
         private void draw()
         {
             pinholeRenderer.Draw(scene);
             //string filename = focus + "-" + scale * 0.7524f + ".png";
-            string filename = "frames/" + this.renderMode + "-P-" + pupil + "-R-" + scale * 0.7524f + "-F-" + focusPoint.X + "-" + focusPoint.Y + ".png";
-            //dofRenderer.Draw(renderTargetView, depthStencilView, pinholeRenderer.outputTexture.texture, pinholeRenderer.depthTexture.srv,
-            //    scene.camera, focus, pupil, renderMode, focusPoint);
-            dofRenderer.Draw(renderTargetView, pinholeRenderer.outputTexture, pinholeRenderer.depthTexture, scene.camera, focus, pupil, renderMode, focusPoint);
+            string filename = "frames/" + this.renderMode + "-P-" + scene.camera.pupil + "-R-" + scene.scale * 0.7524f + "-F-" + scene.camera.focusPoint.X + "-" + scene.camera.focusPoint.Y + ".png";
+            if (renderMode < RenderMode.VisionResult)
+                thinLensRenderer.Draw(renderTargetView, pinholeRenderer.outputTexture, pinholeRenderer.depthTexture, scene.camera, renderMode);
+            else
+                visionRenderer.Draw(renderTargetView, pinholeRenderer.outputTexture, pinholeRenderer.depthTexture, scene.camera, renderMode);
             //if (saveScreenshots)
             //    Texture2D.ToFile(context, dofRenderer.outputBuffer, ImageFileFormat.Png, filename);
             swapChain.Present(0, PresentFlags.None);
@@ -234,8 +210,8 @@ namespace DOFScene
             if (e.Button == MouseButtons.Left)
             {
                 // update focus point
-                this.focusPoint.X = e.Location.X;
-                this.focusPoint.Y = e.Location.Y;
+                this.scene.camera.focusPoint.X = e.Location.X;// +(int)(SystemParameters.ResizeFrameVerticalBorderWidth + SystemParameters.FixedFrameVerticalBorderWidth);
+                this.scene.camera.focusPoint.Y = e.Location.Y;// +(int)(SystemParameters.WindowCaptionHeight + SystemParameters.ResizeFrameHorizontalBorderHeight + SystemParameters.FixedFrameHorizontalBorderHeight);
                 draw();
             }
         }

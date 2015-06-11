@@ -95,7 +95,7 @@ namespace DOFScene.Renderers
         }
 
         public void Draw(RenderTargetView renderView, ColorTexture sceneColorTexture, DepthTexture sceneDepthTexture,
-            Camera camera, float focus, float pupil, RenderMode renderMode, System.Windows.Point focusPoint)
+            Camera camera, RenderMode renderMode)
         {
             // Prepare All the stages
             context.InputAssembler.InputLayout = layout;
@@ -106,29 +106,29 @@ namespace DOFScene.Renderers
             float z_n = camera.nearPlaneZ;
             float z_f = camera.farPlaneZ;
             float imagePlanePixelsPerMeter = (float)(displaySize.Height / (-2 * Math.Tan(camera.fov / 2)));
-            float scale = (float)(imagePlanePixelsPerMeter * pupil * 0.001 / (camera.focusPlaneZ * Math.Max(12, displaySize.Width / 100.0)));
+            float scale = (float)(imagePlanePixelsPerMeter * camera.pupil * 0.001 / (camera.focusPlaneZ * Math.Max(12, displaySize.Width / 100.0)));
             cameraInfo.data.clipInfo = new Vector4(z_n * z_f, z_n - z_f, z_f, scale);
-            cameraInfo.data.focusPlaneZ = -focus;
+            cameraInfo.data.focusPlaneZ = -camera.focusPlaneZ;
             float top = (float)(z_f * Math.Tan(camera.fov / 2));
             float right = top / camera.height * camera.width;
             cameraInfo.data.frustum = new Vector3(right, top, z_f);
-            cameraInfo.data.focusPoint.X = (float)focusPoint.X / camera.width;
-            cameraInfo.data.focusPoint.Y = (float)focusPoint.Y / camera.height;
+            cameraInfo.data.focusPoint.X = (float)camera.focusPoint.X / camera.width;
+            cameraInfo.data.focusPoint.Y = (float)camera.focusPoint.Y / camera.height;
             cameraInfo.Update(context);
 
             spritePosition.Update(context);
             blurParam.Update(context);
 
             compositeInfo.data.renderMode = (int)renderMode;
-            compositeInfo.data.focusPosition.X = (float)focusPoint.X / camera.width;
-            compositeInfo.data.focusPosition.Y = (float)focusPoint.Y / camera.height;
+            compositeInfo.data.focusPosition.X = (float)camera.focusPoint.X / camera.width;
+            compositeInfo.data.focusPosition.Y = (float)camera.focusPoint.Y / camera.height;
             compositeInfo.Update(context);
 
             spriteVertexBuffer.Update(context);
 
             #endregion
 
-            draw(renderView, sceneColorTexture, sceneDepthTexture, camera, focus, pupil, renderMode, focusPoint);
+            draw(renderView, sceneColorTexture, sceneDepthTexture, camera, renderMode);
         }
 
         protected virtual void initResources()
@@ -136,7 +136,7 @@ namespace DOFScene.Renderers
         }
 
         protected virtual void draw(RenderTargetView renderView, ColorTexture sceneColorTexture, DepthTexture sceneDepthTexture,
-            Camera camera, float focus, float pupil, RenderMode renderMode, System.Windows.Point focusPoint)
+            Camera camera, RenderMode renderMode)
         {
         }
     }

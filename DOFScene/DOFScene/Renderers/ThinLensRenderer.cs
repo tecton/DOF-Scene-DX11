@@ -28,7 +28,7 @@ namespace DOFScene.Renderers
         }
 
         protected override void draw(RenderTargetView renderView, ColorTexture sceneColorTexture, DepthTexture sceneDepthTexture,
-            Camera camera, float focus, float pupil, RenderMode renderMode, System.Windows.Point focusPoint)
+            Camera camera, RenderMode renderMode)
         {
             // pin-hole part
             drawCoCPass(sceneColorTexture, sceneDepthTexture);

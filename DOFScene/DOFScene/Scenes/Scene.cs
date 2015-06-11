@@ -16,6 +16,8 @@ namespace DOFScene
         public float fov; // rad
         public float width;
         public float height;
+        public float pupil;
+        public Vector2 focusPoint;
     };
 
     public class Scene
@@ -64,6 +66,8 @@ namespace DOFScene
             camera.fov = (float)Math.PI * fov / 180.0f;
             camera.width = size.Width;
             camera.height = size.Height;
+            // focus at center of screen by default
+            camera.focusPoint = new Vector2(size.Width / 2, size.Height / 2);
 
             models = new List<Model>();
             // load model
