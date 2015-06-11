@@ -13,7 +13,7 @@ using Device = SharpDX.Direct3D11.Device;
 
 namespace DOFScene
 {
-    class TriangleMesh
+    public class TriangleMesh
     {
         public int vertexSize = 32;
 

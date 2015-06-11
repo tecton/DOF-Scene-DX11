@@ -89,6 +89,8 @@
     <Compile Include="ConstantData\ConstantData.cs" />
     <Compile Include="Renderers\Renderer.cs" />
     <Compile Include="Renderers\PinholeRenderer.cs" />
+    <Compile Include="Scenes\DragonScene.cs" />
+    <Compile Include="Scenes\MicroCityScene.cs" />
     <Compile Include="Scenes\Scene.cs" />
     <Compile Include="Shaders\ShaderResource.cs" />
     <Compile Include="Textures\ColorTexture.cs" />

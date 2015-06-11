@@ -36,7 +36,7 @@ namespace DOFScene.Renderers
             context.ClearDepthStencilView(depthTexture.dsv, DepthStencilClearFlags.Depth, 1.0f, 0);
             context.ClearRenderTargetView(outputTexture.rtv, Color.Black);
 
-            scene.UpdateFrameConstants(context, lightingConstant);
+            scene.UpdateLightingConstants(context, lightingConstant);
             scene.Draw(context);
         }
 

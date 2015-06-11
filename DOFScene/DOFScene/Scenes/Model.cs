@@ -15,7 +15,7 @@ using DOFScene.ConstantData;
 namespace DOFScene
 {
     // A container for the meshes loaded from the file
-    class Model
+    public class Model
     {
         List<TriangleMesh> m_meshes;
 

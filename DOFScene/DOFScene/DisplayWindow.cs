@@ -183,7 +183,7 @@ namespace DOFScene
             context.InputAssembler.PrimitiveTopology = PrimitiveTopology.TriangleList;
 
             // Create Scene
-            scene = new Scene(device, form.Size);
+            scene = new MicroCityScene(device, form.Size);
 
             // Init two renderers
             pinholeRenderer.Init(device, context, displaySize);
