@@ -17,7 +17,8 @@ namespace DOFScene.Renderers
     {
         protected InputLayout layout;
 
-        protected ColorTexture resultTexture;
+        protected bool renderToResult = false;
+        public ColorTexture resultTexture;
         protected DepthTexture depthTexture;
 
         #region Shaders
@@ -92,6 +93,11 @@ namespace DOFScene.Renderers
             depthTexture = new DepthTexture(device, displaySize);
 
             spriteVertexBuffer = new SpriteConstantData(device, displaySize);
+        }
+
+        public void setRenderToResult(bool _renderToResult)
+        {
+            this.renderToResult = _renderToResult;
         }
 
         public void Draw(RenderTargetView renderView, ColorTexture sceneColorTexture, DepthTexture sceneDepthTexture,

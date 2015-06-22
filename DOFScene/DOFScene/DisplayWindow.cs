@@ -27,8 +27,8 @@ namespace DOFScene
     class DisplayWindow
     {
         #region Display Form
-        const int WIDTH = 1000;
-        const int HEIGHT = 424;
+        const int WIDTH = 982;
+        const int HEIGHT = 486;
         Form form = new Form();
         RenderControl dx11Control = new RenderControl();
         System.Drawing.Size displaySize = new System.Drawing.Size(WIDTH, HEIGHT);
@@ -71,15 +71,16 @@ namespace DOFScene
 
         #region Interfaces
 
-        //public Form getForm()
-        //{
-        //    return form;
-        //}
+        public Form getForm()
+        {
+            return form;
+        }
 
         public void setScreenshots(bool toSave)
         {
             this.saveScreenshots = toSave;
-            //dofRenderer.setScreenshots(toSave);
+            visionRenderer.setRenderToResult(toSave);
+            thinLensRenderer.setRenderToResult(toSave);
         }
 
         public void setFocusPoint(int x, int y)
@@ -183,7 +184,7 @@ namespace DOFScene
             context.InputAssembler.PrimitiveTopology = PrimitiveTopology.TriangleList;
 
             // Create Scene
-            scene = new MicroCityScene(device, form.Size);
+            scene = new DragonScene(device, form.Size);
 
             // Init two renderers
             pinholeRenderer.Init(device, context, displaySize);
@@ -195,13 +196,16 @@ namespace DOFScene
         {
             pinholeRenderer.Draw(scene);
             //string filename = focus + "-" + scale * 0.7524f + ".png";
-            string filename = "frames/" + this.renderMode + "-P-" + scene.camera.pupil + "-R-" + scene.scale * 0.7524f + "-F-" + scene.camera.focusPoint.X + "-" + scene.camera.focusPoint.Y + ".png";
+            string filename = "pupil-diff/" + this.renderMode + "-P-" + scene.camera.pupil + "-R-" + scene.scale * 0.7524f + "-F-" + scene.camera.focusPoint.X + "-" + scene.camera.focusPoint.Y + ".png";
             if (renderMode < RenderMode.VisionResult)
                 thinLensRenderer.Draw(renderTargetView, pinholeRenderer.outputTexture, pinholeRenderer.depthTexture, scene.camera, renderMode);
             else
                 visionRenderer.Draw(renderTargetView, pinholeRenderer.outputTexture, pinholeRenderer.depthTexture, scene.camera, renderMode);
-            //if (saveScreenshots)
-            //    Texture2D.ToFile(context, dofRenderer.outputBuffer, ImageFileFormat.Png, filename);
+            if (saveScreenshots)
+            {
+                Texture2D.ToFile(context, visionRenderer.resultTexture.texture, ImageFileFormat.Png, filename);
+                Texture2D.ToFile(context, thinLensRenderer.resultTexture.texture, ImageFileFormat.Png, filename);
+            }
             swapChain.Present(0, PresentFlags.None);
         }
 

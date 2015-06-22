@@ -95,11 +95,19 @@ namespace DOFScene.Renderers
         {
             context.PixelShader.Set(compositePixelShader.ps);
             context.PixelShader.SetConstantBuffer(1, compositeInfo.getBuffer());
-            context.OutputMerger.SetRenderTargets(depthTexture.dsv, renderView);
+            if (this.renderToResult)
+            {
+                context.OutputMerger.SetRenderTargets(depthTexture.dsv, this.resultTexture.rtv);
+                context.ClearRenderTargetView(this.resultTexture.rtv, Color.Black);
+            }
+            else
+            {
+                context.OutputMerger.SetRenderTargets(depthTexture.dsv, renderView);
+                context.ClearRenderTargetView(renderView, Color.Black);
+            }
 
             // Clear views
             context.ClearDepthStencilView(depthTexture.dsv, DepthStencilClearFlags.Depth, 1.0f, 0);
-            context.ClearRenderTargetView(renderView, Color.Black);
             
             context.PixelShader.SetShaderResource(0, cocBuffer.srv);
             context.PixelShader.SetShaderResource(1, vBlurBuffer.srv);
